@@ -44,6 +44,13 @@ function jsonResponse($data, $code = 200) {
 $route = $_GET['route'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 $body = json_decode(file_get_contents('php://input'), true) ?? [];
+
+// Honeypot: if the hidden "website" field has a value, it's a bot
+if (!empty($body['website'])) {
+    // Return a fake success so bots don't retry
+    jsonResponse(['ok' => true]);
+}
+
 $data = loadData();
 
 // Route: /members

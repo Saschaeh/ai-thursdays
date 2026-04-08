@@ -47,6 +47,7 @@ export default function Home() {
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   const [nameInput, setNameInput] = useState('');
   const [showNewMember, setShowNewMember] = useState(false);
+  const [hp, setHp] = useState('');
 
   const loadIdeas = useCallback(async () => {
     const data = await api<Idea[]>('/ideas');
@@ -69,10 +70,10 @@ export default function Home() {
   };
 
   const handleNewMember = async () => {
-    if (!nameInput.trim()) return;
+    if (!nameInput.trim() || hp) return;
     const member = await api<Member>('/members', {
       method: 'POST',
-      body: JSON.stringify({ name: nameInput.trim() }),
+      body: JSON.stringify({ name: nameInput.trim(), website: hp }),
     });
     selectUser(member);
     setNameInput('');
@@ -129,6 +130,15 @@ export default function Home() {
                   placeholder="Your name"
                   autoFocus
                   className="flex-1 px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+                />
+                <input
+                  value={hp}
+                  onChange={e => setHp(e.target.value)}
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  className="absolute opacity-0 h-0 w-0 overflow-hidden pointer-events-none"
+                  style={{ position: 'absolute', left: '-9999px' }}
                 />
                 <button
                   onClick={handleNewMember}
@@ -261,12 +271,13 @@ function NewIdeaForm({ currentUser, onSubmit, onCancel }: {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('General');
+  const [hp, setHp] = useState('');
 
   const handleSubmit = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() || hp) return;
     await api('/ideas', {
       method: 'POST',
-      body: JSON.stringify({ title, description, category, submitted_by: currentUser.id }),
+      body: JSON.stringify({ title, description, category, submitted_by: currentUser.id, website: hp }),
     });
     onSubmit();
   };
@@ -286,6 +297,15 @@ function NewIdeaForm({ currentUser, onSubmit, onCancel }: {
         placeholder="Notes — why is this interesting? Links, context..."
         rows={3}
         className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition resize-none"
+      />
+      <input
+        value={hp}
+        onChange={e => setHp(e.target.value)}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="absolute opacity-0 h-0 w-0 overflow-hidden pointer-events-none"
+        style={{ position: 'absolute', left: '-9999px' }}
       />
       <div className="flex gap-3 items-center">
         <select
@@ -351,12 +371,13 @@ function CommentReplyBox({ ideaId, parentId, currentUser, onSubmit }: {
   ideaId: number; parentId: number | null; currentUser: Member; onSubmit: () => void;
 }) {
   const [text, setText] = useState('');
+  const [hp, setHp] = useState('');
 
   const handleSubmit = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() || hp) return;
     await api(`/ideas/${ideaId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ content: text, member_id: currentUser.id, parent_id: parentId }),
+      body: JSON.stringify({ content: text, member_id: currentUser.id, parent_id: parentId, website: hp }),
     });
     setText('');
     onSubmit();
@@ -371,6 +392,15 @@ function CommentReplyBox({ ideaId, parentId, currentUser, onSubmit }: {
         placeholder={parentId ? 'Write a reply...' : 'Add a comment...'}
         autoFocus={!!parentId}
         className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+      />
+      <input
+        value={hp}
+        onChange={e => setHp(e.target.value)}
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="absolute opacity-0 h-0 w-0 overflow-hidden pointer-events-none"
+        style={{ position: 'absolute', left: '-9999px' }}
       />
       <button
         onClick={handleSubmit}
