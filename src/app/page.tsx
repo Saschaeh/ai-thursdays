@@ -46,32 +46,38 @@ export default function Home() {
   const [showNewIdea, setShowNewIdea] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   const [nameInput, setNameInput] = useState('');
+  const [showNewMember, setShowNewMember] = useState(false);
 
   const loadIdeas = useCallback(async () => {
     const data = await api<Idea[]>('/ideas');
     setIdeas(data);
   }, []);
 
+  const loadMembers = useCallback(async () => {
+    const data = await api<Member[]>('/members');
+    setMembers(data);
+  }, []);
+
   useEffect(() => {
-    api<Member[]>('/members').then(setMembers);
+    loadMembers();
     loadIdeas();
+  }, [loadIdeas, loadMembers]);
 
-    const saved = localStorage.getItem('ai-thursdays-user');
-    if (saved) {
-      try { setCurrentUser(JSON.parse(saved)); } catch { /* ignore */ }
-    }
-  }, [loadIdeas]);
+  const selectUser = (member: Member) => {
+    setCurrentUser(member);
+    localStorage.setItem('ai-thursdays-user', JSON.stringify(member));
+  };
 
-  const handleLogin = async () => {
+  const handleNewMember = async () => {
     if (!nameInput.trim()) return;
     const member = await api<Member>('/members', {
       method: 'POST',
       body: JSON.stringify({ name: nameInput.trim() }),
     });
-    setCurrentUser(member);
-    localStorage.setItem('ai-thursdays-user', JSON.stringify(member));
+    selectUser(member);
     setNameInput('');
-    api<Member[]>('/members').then(setMembers);
+    setShowNewMember(false);
+    loadMembers();
   };
 
   const handleLogout = () => {
@@ -88,24 +94,50 @@ export default function Home() {
               <span className="text-white text-lg font-bold">AT</span>
             </div>
             <h1 className="text-2xl font-semibold text-white tracking-tight">AI Thursdays</h1>
-            <p className="text-gray-400 mt-1 text-sm">Enter your name to get started</p>
+            <p className="text-gray-400 mt-1 text-sm">Select your name to continue</p>
           </div>
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-            <div className="flex gap-2">
-              <input
-                value={nameInput}
-                onChange={e => setNameInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                placeholder="Your name"
-                className="flex-1 px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
-              />
+            {members.length > 0 && (
+              <div className="space-y-2 mb-4">
+                {members.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => selectUser(m)}
+                    className="w-full flex items-center gap-3 px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white hover:border-emerald-500/50 hover:bg-gray-800/80 transition text-left"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-semibold">
+                      {m.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-medium">{m.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {!showNewMember ? (
               <button
-                onClick={handleLogin}
-                className="px-5 py-2.5 bg-emerald-500 text-white font-medium rounded-xl hover:bg-emerald-400 transition"
+                onClick={() => setShowNewMember(true)}
+                className="w-full px-4 py-3 border border-dashed border-gray-700 rounded-xl text-gray-400 hover:text-emerald-400 hover:border-emerald-500/50 transition text-sm"
               >
-                Join
+                + New member
               </button>
-            </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  value={nameInput}
+                  onChange={e => setNameInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleNewMember()}
+                  placeholder="Your name"
+                  autoFocus
+                  className="flex-1 px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+                />
+                <button
+                  onClick={handleNewMember}
+                  className="px-5 py-2.5 bg-emerald-500 text-white font-medium rounded-xl hover:bg-emerald-400 transition"
+                >
+                  Join
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
