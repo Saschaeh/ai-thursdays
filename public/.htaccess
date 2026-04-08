@@ -1,0 +1,13 @@
+RewriteEngine On
+
+# Route API requests to api.php
+RewriteRule ^api/(.*)$ api.php/$1 [L,QSA]
+
+# Serve existing files directly
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# SPA fallback — serve index.html for all other routes
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]

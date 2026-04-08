@@ -28,8 +28,10 @@ const STATUS_COLORS: Record<string, string> = {
   'completed': 'bg-green-100 text-green-800',
 };
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '/Thursdays';
+
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${BASE}/api${path}`, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });

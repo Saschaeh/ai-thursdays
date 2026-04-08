@@ -1,0 +1,42 @@
+name: Deploy to Kinsta
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to Kinsta
+        env:
+          SSH_KEY: ${{ secrets.KINSTA_SSH_KEY }}
+          SSH_HOST: 79.72.48.249
+          SSH_PORT: 22874
+          SSH_USER: idletuesday
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p $SSH_PORT $SSH_HOST >> ~/.ssh/known_hosts 2>/dev/null
+
+          rsync -avz --delete \
+            --exclude='data/' \
+            -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT" \
+            ./out/ \
+            $SSH_USER@$SSH_HOST:~/public/Thursdays/
