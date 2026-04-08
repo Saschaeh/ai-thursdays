@@ -31,7 +31,7 @@ const STATUS_COLORS: Record<string, string> = {
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '/Thursdays';
 
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}/api${path}`, {
+  const res = await fetch(`${BASE}/api.php?route=${encodeURIComponent(path)}`, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   });
