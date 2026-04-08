@@ -9,60 +9,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-mysqli_report(MYSQLI_REPORT_OFF);
-$db = new mysqli('localhost', 'idletuesday', 'fApufdLPD9uAX5e', 'idletuesday');
-if ($db->connect_error) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Database connection failed']);
-    exit;
+$dataDir = __DIR__ . '/data';
+if (!is_dir($dataDir)) {
+    mkdir($dataDir, 0755, true);
 }
-$db->set_charset('utf8mb4');
 
-$db->multi_query("
-    CREATE TABLE IF NOT EXISTS ait_members (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL UNIQUE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS ait_ideas (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        title VARCHAR(500) NOT NULL,
-        description TEXT,
-        category VARCHAR(100) NOT NULL DEFAULT 'General',
-        status VARCHAR(50) NOT NULL DEFAULT 'new',
-        submitted_by INT,
-        assigned_to INT,
-        target_date DATE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (submitted_by) REFERENCES ait_members(id),
-        FOREIGN KEY (assigned_to) REFERENCES ait_members(id)
-    );
-    CREATE TABLE IF NOT EXISTS ait_comments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        idea_id INT NOT NULL,
-        member_id INT NOT NULL,
-        content TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (idea_id) REFERENCES ait_ideas(id) ON DELETE CASCADE,
-        FOREIGN KEY (member_id) REFERENCES ait_members(id)
-    );
-    CREATE TABLE IF NOT EXISTS ait_votes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        idea_id INT NOT NULL,
-        member_id INT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_vote (idea_id, member_id),
-        FOREIGN KEY (idea_id) REFERENCES ait_ideas(id) ON DELETE CASCADE,
-        FOREIGN KEY (member_id) REFERENCES ait_members(id)
-    );
-");
-// Flush multi_query results
-while ($db->next_result()) { $db->store_result(); }
+$dataFile = $dataDir . '/db.json';
 
-$route = $_GET['route'] ?? '';
-$method = $_SERVER['REQUEST_METHOD'];
-$body = json_decode(file_get_contents('php://input'), true) ?? [];
+function loadData() {
+    global $dataFile;
+    if (!file_exists($dataFile)) {
+        return ['members' => [], 'ideas' => [], 'comments' => [], 'votes' => [], 'next_id' => 1];
+    }
+    return json_decode(file_get_contents($dataFile), true);
+}
+
+function saveData($data) {
+    global $dataFile;
+    file_put_contents($dataFile, json_encode($data, JSON_PRETTY_PRINT), LOCK_EX);
+}
+
+function nextId(&$data) {
+    $id = $data['next_id'];
+    $data['next_id']++;
+    return $id;
+}
 
 function jsonResponse($data, $code = 200) {
     http_response_code($code);
@@ -70,76 +41,70 @@ function jsonResponse($data, $code = 200) {
     exit;
 }
 
-function queryAll($db, $sql, $params = [], $types = '') {
-    $stmt = $db->prepare($sql);
-    if ($params) {
-        $stmt->bind_param($types, ...$params);
-    }
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $rows = [];
-    while ($row = $result->fetch_assoc()) {
-        $rows[] = $row;
-    }
-    $stmt->close();
-    return $rows;
-}
-
-function queryOne($db, $sql, $params = [], $types = '') {
-    $rows = queryAll($db, $sql, $params, $types);
-    return $rows[0] ?? null;
-}
+$route = $_GET['route'] ?? '';
+$method = $_SERVER['REQUEST_METHOD'];
+$body = json_decode(file_get_contents('php://input'), true) ?? [];
+$data = loadData();
 
 // Route: /members
 if ($route === '/members') {
     if ($method === 'GET') {
-        jsonResponse(queryAll($db, 'SELECT * FROM ait_members ORDER BY name'));
+        $members = $data['members'];
+        usort($members, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+        jsonResponse($members);
     }
     if ($method === 'POST') {
         $name = trim($body['name'] ?? '');
         if (!$name) jsonResponse(['error' => 'Name is required'], 400);
 
-        $existing = queryOne($db, 'SELECT * FROM ait_members WHERE name = ?', [$name], 's');
-        if ($existing) jsonResponse($existing);
+        foreach ($data['members'] as $m) {
+            if (strcasecmp($m['name'], $name) === 0) jsonResponse($m);
+        }
 
-        $stmt = $db->prepare('INSERT INTO ait_members (name) VALUES (?)');
-        $stmt->bind_param('s', $name);
-        $stmt->execute();
-        $id = $stmt->insert_id;
-        $stmt->close();
-        jsonResponse(queryOne($db, 'SELECT * FROM ait_members WHERE id = ?', [$id], 'i'));
+        $member = ['id' => nextId($data), 'name' => $name, 'created_at' => date('Y-m-d H:i:s')];
+        $data['members'][] = $member;
+        saveData($data);
+        jsonResponse($member);
     }
 }
 
 // Route: /ideas
 if ($route === '/ideas') {
     if ($method === 'GET') {
-        jsonResponse(queryAll($db, "
-            SELECT i.*,
-                m1.name as submitted_by_name,
-                m2.name as assigned_to_name,
-                (SELECT COUNT(*) FROM ait_votes WHERE idea_id = i.id) as vote_count,
-                (SELECT COUNT(*) FROM ait_comments WHERE idea_id = i.id) as comment_count
-            FROM ait_ideas i
-            LEFT JOIN ait_members m1 ON i.submitted_by = m1.id
-            LEFT JOIN ait_members m2 ON i.assigned_to = m2.id
-            ORDER BY i.created_at DESC
-        "));
+        $result = [];
+        foreach ($data['ideas'] as $idea) {
+            $idea['submitted_by_name'] = null;
+            $idea['assigned_to_name'] = null;
+            foreach ($data['members'] as $m) {
+                if ($m['id'] === $idea['submitted_by']) $idea['submitted_by_name'] = $m['name'];
+                if ($m['id'] === $idea['assigned_to']) $idea['assigned_to_name'] = $m['name'];
+            }
+            $idea['vote_count'] = count(array_filter($data['votes'], fn($v) => $v['idea_id'] === $idea['id']));
+            $idea['comment_count'] = count(array_filter($data['comments'], fn($c) => $c['idea_id'] === $idea['id']));
+            $result[] = $idea;
+        }
+        usort($result, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+        jsonResponse($result);
     }
     if ($method === 'POST') {
         $title = trim($body['title'] ?? '');
         if (!$title) jsonResponse(['error' => 'Title is required'], 400);
 
-        $desc = $body['description'] ?? '';
-        $cat = $body['category'] ?? 'General';
-        $by = $body['submitted_by'] ?? null;
-
-        $stmt = $db->prepare('INSERT INTO ait_ideas (title, description, category, submitted_by) VALUES (?, ?, ?, ?)');
-        $stmt->bind_param('sssi', $title, $desc, $cat, $by);
-        $stmt->execute();
-        $id = $stmt->insert_id;
-        $stmt->close();
-        jsonResponse(queryOne($db, 'SELECT * FROM ait_ideas WHERE id = ?', [$id], 'i'));
+        $idea = [
+            'id' => nextId($data),
+            'title' => $title,
+            'description' => $body['description'] ?? '',
+            'category' => $body['category'] ?? 'General',
+            'status' => 'new',
+            'submitted_by' => $body['submitted_by'] ?? null,
+            'assigned_to' => null,
+            'target_date' => null,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+        $data['ideas'][] = $idea;
+        saveData($data);
+        jsonResponse($idea);
     }
 }
 
@@ -147,67 +112,63 @@ if ($route === '/ideas') {
 if (preg_match('#^/ideas/(\d+)$#', $route, $m)) {
     $id = (int)$m[1];
 
+    $ideaIdx = null;
+    foreach ($data['ideas'] as $idx => $idea) {
+        if ($idea['id'] === $id) { $ideaIdx = $idx; break; }
+    }
+    if ($ideaIdx === null) jsonResponse(['error' => 'Not found'], 404);
+
     if ($method === 'GET') {
-        $idea = queryOne($db, "
-            SELECT i.*,
-                m1.name as submitted_by_name,
-                m2.name as assigned_to_name,
-                (SELECT COUNT(*) FROM ait_votes WHERE idea_id = i.id) as vote_count
-            FROM ait_ideas i
-            LEFT JOIN ait_members m1 ON i.submitted_by = m1.id
-            LEFT JOIN ait_members m2 ON i.assigned_to = m2.id
-            WHERE i.id = ?
-        ", [$id], 'i');
-        if (!$idea) jsonResponse(['error' => 'Not found'], 404);
+        $idea = $data['ideas'][$ideaIdx];
+        $idea['submitted_by_name'] = null;
+        $idea['assigned_to_name'] = null;
+        foreach ($data['members'] as $mem) {
+            if ($mem['id'] === $idea['submitted_by']) $idea['submitted_by_name'] = $mem['name'];
+            if ($mem['id'] === $idea['assigned_to']) $idea['assigned_to_name'] = $mem['name'];
+        }
+        $idea['vote_count'] = count(array_filter($data['votes'], fn($v) => $v['idea_id'] === $id));
 
-        $idea['comments'] = queryAll($db, "
-            SELECT c.*, m.name as member_name
-            FROM ait_comments c JOIN ait_members m ON c.member_id = m.id
-            WHERE c.idea_id = ? ORDER BY c.created_at ASC
-        ", [$id], 'i');
+        $comments = array_values(array_filter($data['comments'], fn($c) => $c['idea_id'] === $id));
+        foreach ($comments as &$c) {
+            $c['member_name'] = '';
+            foreach ($data['members'] as $mem) {
+                if ($mem['id'] === $c['member_id']) { $c['member_name'] = $mem['name']; break; }
+            }
+        }
+        usort($comments, fn($a, $b) => strcmp($a['created_at'], $b['created_at']));
+        $idea['comments'] = $comments;
 
-        $idea['votes'] = queryAll($db, "
-            SELECT v.*, m.name as member_name
-            FROM ait_votes v JOIN ait_members m ON v.member_id = m.id
-            WHERE v.idea_id = ?
-        ", [$id], 'i');
+        $votes = array_values(array_filter($data['votes'], fn($v) => $v['idea_id'] === $id));
+        foreach ($votes as &$v) {
+            $v['member_name'] = '';
+            foreach ($data['members'] as $mem) {
+                if ($mem['id'] === $v['member_id']) { $v['member_name'] = $mem['name']; break; }
+            }
+        }
+        $idea['votes'] = $votes;
 
         jsonResponse($idea);
     }
 
     if ($method === 'PATCH') {
-        $sets = [];
-        $params = [];
-        $types = '';
         foreach (['title', 'description', 'category', 'status', 'target_date'] as $key) {
             if (array_key_exists($key, $body)) {
-                $sets[] = "$key = ?";
-                $params[] = $body[$key];
-                $types .= 's';
+                $data['ideas'][$ideaIdx][$key] = $body[$key];
             }
         }
         if (array_key_exists('assigned_to', $body)) {
-            $sets[] = "assigned_to = ?";
-            $params[] = $body['assigned_to'] ? (int)$body['assigned_to'] : null;
-            $types .= 'i';
+            $data['ideas'][$ideaIdx]['assigned_to'] = $body['assigned_to'] ? (int)$body['assigned_to'] : null;
         }
-        if (empty($sets)) jsonResponse(['error' => 'No fields to update'], 400);
-
-        $params[] = $id;
-        $types .= 'i';
-
-        $stmt = $db->prepare("UPDATE ait_ideas SET " . implode(', ', $sets) . " WHERE id = ?");
-        $stmt->bind_param($types, ...$params);
-        $stmt->execute();
-        $stmt->close();
-        jsonResponse(queryOne($db, 'SELECT * FROM ait_ideas WHERE id = ?', [$id], 'i'));
+        $data['ideas'][$ideaIdx]['updated_at'] = date('Y-m-d H:i:s');
+        saveData($data);
+        jsonResponse($data['ideas'][$ideaIdx]);
     }
 
     if ($method === 'DELETE') {
-        $stmt = $db->prepare('DELETE FROM ait_ideas WHERE id = ?');
-        $stmt->bind_param('i', $id);
-        $stmt->execute();
-        $stmt->close();
+        array_splice($data['ideas'], $ideaIdx, 1);
+        $data['comments'] = array_values(array_filter($data['comments'], fn($c) => $c['idea_id'] !== $id));
+        $data['votes'] = array_values(array_filter($data['votes'], fn($v) => $v['idea_id'] !== $id));
+        saveData($data);
         jsonResponse(['ok' => true]);
     }
 }
@@ -219,18 +180,21 @@ if (preg_match('#^/ideas/(\d+)/comments$#', $route, $m)) {
         $content = trim($body['content'] ?? '');
         if (!$content) jsonResponse(['error' => 'Content is required'], 400);
 
-        $memberId = (int)$body['member_id'];
-        $stmt = $db->prepare('INSERT INTO ait_comments (idea_id, member_id, content) VALUES (?, ?, ?)');
-        $stmt->bind_param('iis', $ideaId, $memberId, $content);
-        $stmt->execute();
-        $cid = $stmt->insert_id;
-        $stmt->close();
+        $comment = [
+            'id' => nextId($data),
+            'idea_id' => $ideaId,
+            'member_id' => (int)$body['member_id'],
+            'content' => $content,
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
+        $data['comments'][] = $comment;
+        saveData($data);
 
-        jsonResponse(queryOne($db, "
-            SELECT c.*, m.name as member_name
-            FROM ait_comments c JOIN ait_members m ON c.member_id = m.id
-            WHERE c.id = ?
-        ", [$cid], 'i'));
+        $comment['member_name'] = '';
+        foreach ($data['members'] as $mem) {
+            if ($mem['id'] === $comment['member_id']) { $comment['member_name'] = $mem['name']; break; }
+        }
+        jsonResponse($comment);
     }
 }
 
@@ -239,20 +203,26 @@ if (preg_match('#^/ideas/(\d+)/votes$#', $route, $m)) {
     $ideaId = (int)$m[1];
     if ($method === 'POST') {
         $memberId = (int)$body['member_id'];
-        $existing = queryOne($db, 'SELECT id FROM ait_votes WHERE idea_id = ? AND member_id = ?',
-            [$ideaId, $memberId], 'ii');
-        if ($existing) {
-            $stmt = $db->prepare('DELETE FROM ait_votes WHERE id = ?');
-            $eid = (int)$existing['id'];
-            $stmt->bind_param('i', $eid);
-            $stmt->execute();
-            $stmt->close();
+        $existingIdx = null;
+        foreach ($data['votes'] as $idx => $v) {
+            if ($v['idea_id'] === $ideaId && $v['member_id'] === $memberId) {
+                $existingIdx = $idx;
+                break;
+            }
+        }
+        if ($existingIdx !== null) {
+            array_splice($data['votes'], $existingIdx, 1);
+            $data['votes'] = array_values($data['votes']);
+            saveData($data);
             jsonResponse(['voted' => false]);
         } else {
-            $stmt = $db->prepare('INSERT INTO ait_votes (idea_id, member_id) VALUES (?, ?)');
-            $stmt->bind_param('ii', $ideaId, $memberId);
-            $stmt->execute();
-            $stmt->close();
+            $data['votes'][] = [
+                'id' => nextId($data),
+                'idea_id' => $ideaId,
+                'member_id' => $memberId,
+                'created_at' => date('Y-m-d H:i:s'),
+            ];
+            saveData($data);
             jsonResponse(['voted' => true]);
         }
     }
