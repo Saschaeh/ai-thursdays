@@ -21,11 +21,11 @@ const STATUS_LABELS: Record<string, string> = {
   'in-progress': 'In Progress', 'completed': 'Completed'
 };
 const STATUS_COLORS: Record<string, string> = {
-  'new': 'bg-blue-100 text-blue-800',
-  'discussed': 'bg-yellow-100 text-yellow-800',
-  'assigned': 'bg-purple-100 text-purple-800',
-  'in-progress': 'bg-orange-100 text-orange-800',
-  'completed': 'bg-green-100 text-green-800',
+  'new': 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  'discussed': 'bg-amber-50 text-amber-700 border border-amber-200',
+  'assigned': 'bg-sky-50 text-sky-700 border border-sky-200',
+  'in-progress': 'bg-orange-50 text-orange-700 border border-orange-200',
+  'completed': 'bg-green-50 text-green-700 border border-green-200',
 };
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '/Thursdays';
@@ -81,24 +81,31 @@ export default function Home() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-sm w-full">
-          <h1 className="text-2xl font-bold text-center mb-2">AI Thursdays</h1>
-          <p className="text-gray-500 text-center mb-6 text-sm">Enter your name to get started</p>
-          <div className="flex gap-2">
-            <input
-              value={nameInput}
-              onChange={e => setNameInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              placeholder="Your name"
-              className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
-            <button
-              onClick={handleLogin}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-            >
-              Join
-            </button>
+      <div className="min-h-screen flex items-center justify-center bg-gray-950">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-500 mb-4">
+              <span className="text-white text-lg font-bold">AT</span>
+            </div>
+            <h1 className="text-2xl font-semibold text-white tracking-tight">AI Thursdays</h1>
+            <p className="text-gray-400 mt-1 text-sm">Enter your name to get started</p>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+            <div className="flex gap-2">
+              <input
+                value={nameInput}
+                onChange={e => setNameInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                placeholder="Your name"
+                className="flex-1 px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+              />
+              <button
+                onClick={handleLogin}
+                className="px-5 py-2.5 bg-emerald-500 text-white font-medium rounded-xl hover:bg-emerald-400 transition"
+              >
+                Join
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -109,33 +116,38 @@ export default function Home() {
   const completedIdeas = ideas.filter(i => i.status === 'completed');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-indigo-700">AI Thursdays</h1>
+    <div className="min-h-screen bg-gray-950 text-gray-100">
+      <header className="bg-gray-900 border-b border-gray-800">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500">
+              <span className="text-white text-xs font-bold">AT</span>
+            </div>
+            <h1 className="text-lg font-semibold text-white tracking-tight">AI Thursdays</h1>
+          </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">Hi, <strong>{currentUser.name}</strong></span>
-            <button onClick={handleLogout} className="text-sm text-gray-400 hover:text-gray-600">
+            <span className="text-sm text-gray-400">Hi, <strong className="text-gray-200">{currentUser.name}</strong></span>
+            <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-gray-300 transition">
               Switch user
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 mt-4">
-        <div className="flex gap-1 bg-white rounded-lg p-1 shadow-sm w-fit">
+      <div className="max-w-5xl mx-auto px-6 mt-6">
+        <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit">
           <button
             onClick={() => setTab('ideas')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-              tab === 'ideas' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              tab === 'ideas' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
             }`}
           >
             Ideas
           </button>
           <button
             onClick={() => setTab('diary')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-              tab === 'diary' ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              tab === 'diary' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
             }`}
           >
             Diary / Schedule
@@ -143,14 +155,14 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-4">
+      <div className="max-w-5xl mx-auto px-6 py-6">
         {tab === 'ideas' && (
           <>
-            <div className="flex justify-between items-center mb-4">
-              <p className="text-gray-600 text-sm">{ideas.length} idea{ideas.length !== 1 ? 's' : ''} submitted</p>
+            <div className="flex justify-between items-center mb-5">
+              <p className="text-gray-500 text-sm">{ideas.length} idea{ideas.length !== 1 ? 's' : ''} submitted</p>
               <button
                 onClick={() => setShowNewIdea(true)}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium"
+                className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 text-sm font-medium transition"
               >
                 + New Idea
               </button>
@@ -182,7 +194,9 @@ export default function Home() {
                 />
               ))}
               {ideas.length === 0 && (
-                <p className="text-center text-gray-400 py-12">No ideas yet. Be the first to add one!</p>
+                <div className="text-center py-16">
+                  <p className="text-gray-600 text-sm">No ideas yet. Be the first to add one!</p>
+                </div>
               )}
             </div>
           </>
@@ -226,34 +240,34 @@ function NewIdeaForm({ currentUser, onSubmit, onCancel }: {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 mb-4 border">
-      <h3 className="font-semibold mb-3">New Idea</h3>
+    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-5">
+      <h3 className="font-semibold text-white mb-4">New Idea</h3>
       <input
         value={title}
         onChange={e => setTitle(e.target.value)}
         placeholder="Title — what's the tool or topic?"
-        className="w-full px-3 py-2 border rounded-lg mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+        className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
       />
       <textarea
         value={description}
         onChange={e => setDescription(e.target.value)}
         placeholder="Notes — why is this interesting? Links, context..."
         rows={3}
-        className="w-full px-3 py-2 border rounded-lg mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
+        className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition resize-none"
       />
-      <div className="flex gap-2 items-center">
+      <div className="flex gap-3 items-center">
         <select
           value={category}
           onChange={e => setCategory(e.target.value)}
-          className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          className="px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
         >
           {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <div className="flex-1" />
-        <button onClick={onCancel} className="px-4 py-2 text-gray-500 hover:text-gray-700 text-sm">Cancel</button>
+        <button onClick={onCancel} className="px-4 py-2 text-gray-400 hover:text-gray-200 text-sm transition">Cancel</button>
         <button
           onClick={handleSubmit}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium"
+          className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 text-sm font-medium transition"
         >
           Submit Idea
         </button>
@@ -267,34 +281,34 @@ function IdeaCard({ idea, onSelect, onVote }: {
 }) {
   return (
     <div
-      className="bg-white rounded-xl shadow-sm p-4 border hover:shadow-md transition cursor-pointer"
+      className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition cursor-pointer group"
       onClick={onSelect}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h3 className="font-semibold text-gray-900 truncate">{idea.title}</h3>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[idea.status]}`}>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <h3 className="font-semibold text-white truncate group-hover:text-emerald-400 transition">{idea.title}</h3>
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
               {STATUS_LABELS[idea.status]}
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{idea.category}</span>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">{idea.category}</span>
           </div>
           {idea.description && (
-            <p className="text-sm text-gray-500 line-clamp-2">{idea.description}</p>
+            <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">{idea.description}</p>
           )}
-          <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-            <span>by {idea.submitted_by_name}</span>
-            {idea.assigned_to_name && <span>assigned to <strong>{idea.assigned_to_name}</strong></span>}
+          <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+            <span>by <span className="text-gray-400">{idea.submitted_by_name}</span></span>
+            {idea.assigned_to_name && <span>assigned to <strong className="text-gray-400">{idea.assigned_to_name}</strong></span>}
             {idea.comment_count > 0 && <span>{idea.comment_count} comment{idea.comment_count !== 1 ? 's' : ''}</span>}
           </div>
         </div>
         <button
           onClick={e => { e.stopPropagation(); onVote(); }}
-          className="flex flex-col items-center px-3 py-1 rounded-lg border hover:bg-indigo-50 transition text-sm min-w-[48px]"
+          className="flex flex-col items-center px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:border-emerald-500/50 hover:bg-gray-750 transition text-sm min-w-[52px]"
           title="Click to toggle your vote"
         >
-          <span className="text-lg leading-none">&#9650;</span>
-          <span className="font-semibold text-indigo-600">{idea.vote_count}</span>
+          <svg className="w-4 h-4 text-emerald-500 mb-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3l-7 7h4v7h6v-7h4L10 3z"/></svg>
+          <span className="font-semibold text-emerald-400">{idea.vote_count}</span>
         </button>
       </div>
     </div>
@@ -335,76 +349,76 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-5">
             <div>
-              <h2 className="text-xl font-bold">{idea.title}</h2>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[idea.status]}`}>
+              <h2 className="text-xl font-semibold text-white">{idea.title}</h2>
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
                   {STATUS_LABELS[idea.status]}
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{idea.category}</span>
-                <span className="text-xs text-gray-400">by {idea.submitted_by_name}</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">{idea.category}</span>
+                <span className="text-xs text-gray-500">by <span className="text-gray-400">{idea.submitted_by_name}</span></span>
               </div>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-2xl leading-none transition">&times;</button>
           </div>
 
           {idea.description && (
-            <p className="text-gray-700 mb-4 whitespace-pre-wrap">{idea.description}</p>
+            <p className="text-gray-300 mb-5 whitespace-pre-wrap leading-relaxed">{idea.description}</p>
           )}
 
-          <div className="border rounded-lg p-3 mb-4 bg-gray-50">
+          <div className="border border-gray-800 rounded-xl p-4 mb-5 bg-gray-800/50">
             {!editing ? (
               <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-gray-400">
                   {idea.assigned_to_name
-                    ? <>Assigned to <strong>{idea.assigned_to_name}</strong>{idea.target_date ? ` — present by ${idea.target_date}` : ''}</>
+                    ? <>Assigned to <strong className="text-gray-200">{idea.assigned_to_name}</strong>{idea.target_date ? ` — present by ${idea.target_date}` : ''}</>
                     : 'Not yet assigned'}
                 </div>
-                <button onClick={() => setEditing(true)} className="text-sm text-indigo-600 hover:underline">Edit</button>
+                <button onClick={() => setEditing(true)} className="text-sm text-emerald-400 hover:text-emerald-300 transition">Edit</button>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex gap-2 flex-wrap">
-                  <select value={status} onChange={e => setStatus(e.target.value)} className="px-2 py-1 border rounded text-sm">
+                  <select value={status} onChange={e => setStatus(e.target.value)} className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm">
                     {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
                   </select>
-                  <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)} className="px-2 py-1 border rounded text-sm">
+                  <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)} className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm">
                     <option value="">Unassigned</option>
                     {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
-                  <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} className="px-2 py-1 border rounded text-sm" />
+                  <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm" />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleSave} className="px-3 py-1 bg-indigo-600 text-white rounded text-sm">Save</button>
-                  <button onClick={() => setEditing(false)} className="px-3 py-1 text-gray-500 text-sm">Cancel</button>
+                  <button onClick={handleSave} className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-400 transition">Save</button>
+                  <button onClick={() => setEditing(false)} className="px-4 py-1.5 text-gray-400 hover:text-gray-200 text-sm transition">Cancel</button>
                 </div>
               </div>
             )}
           </div>
 
           {idea.votes && idea.votes.length > 0 && (
-            <div className="mb-4 text-sm text-gray-500">
-              Votes: {idea.votes.map(v => v.member_name).join(', ')}
+            <div className="mb-5 text-sm text-gray-500">
+              Votes: <span className="text-gray-400">{idea.votes.map(v => v.member_name).join(', ')}</span>
             </div>
           )}
 
-          <h3 className="font-semibold mb-2 text-sm text-gray-700">Comments</h3>
-          <div className="space-y-3 mb-4">
+          <h3 className="font-semibold mb-3 text-sm text-gray-400 uppercase tracking-wide">Comments</h3>
+          <div className="space-y-3 mb-5">
             {idea.comments?.map(c => (
-              <div key={c.id} className="border rounded-lg p-3">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-medium text-sm">{c.member_name}</span>
-                  <span className="text-xs text-gray-400">{new Date(c.created_at).toLocaleDateString()}</span>
+              <div key={c.id} className="border border-gray-800 rounded-xl p-4 bg-gray-800/30">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-medium text-sm text-gray-200">{c.member_name}</span>
+                  <span className="text-xs text-gray-600">{new Date(c.created_at).toLocaleDateString()}</span>
                 </div>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.content}</p>
+                <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{c.content}</p>
               </div>
             ))}
             {(!idea.comments || idea.comments.length === 0) && (
-              <p className="text-sm text-gray-400">No comments yet.</p>
+              <p className="text-sm text-gray-600">No comments yet.</p>
             )}
           </div>
 
@@ -414,11 +428,11 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate }: {
               onChange={e => setComment(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleComment()}
               placeholder="Add a comment..."
-              className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className="flex-1 px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
             />
             <button
               onClick={handleComment}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"
+              className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-medium hover:bg-emerald-400 transition"
             >
               Post
             </button>
@@ -431,24 +445,26 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate }: {
 
 function DiaryView({ assigned, completed }: { assigned: Idea[]; completed: Idea[] }) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h2 className="text-lg font-bold mb-3">Active Assignments</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">Active Assignments</h2>
         {assigned.length === 0 ? (
-          <p className="text-gray-400 text-sm">No active assignments. Discuss ideas on Thursday and assign topics!</p>
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center">
+            <p className="text-gray-500 text-sm">No active assignments. Discuss ideas on Thursday and assign topics!</p>
+          </div>
         ) : (
           <div className="grid gap-3">
             {assigned.map(idea => (
-              <div key={idea.id} className="bg-white rounded-xl shadow-sm p-4 border">
+              <div key={idea.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold">{idea.title}</h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Assigned to <strong>{idea.assigned_to_name}</strong>
-                      {idea.target_date && <> — present by <strong>{idea.target_date}</strong></>}
+                    <h3 className="font-semibold text-white">{idea.title}</h3>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Assigned to <strong className="text-gray-200">{idea.assigned_to_name}</strong>
+                      {idea.target_date && <> — present by <strong className="text-gray-200">{idea.target_date}</strong></>}
                     </p>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS[idea.status]}`}>
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
                     {STATUS_LABELS[idea.status]}
                   </span>
                 </div>
@@ -459,21 +475,23 @@ function DiaryView({ assigned, completed }: { assigned: Idea[]; completed: Idea[
       </div>
 
       <div>
-        <h2 className="text-lg font-bold mb-3">Completed</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">Completed</h2>
         {completed.length === 0 ? (
-          <p className="text-gray-400 text-sm">No completed topics yet.</p>
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center">
+            <p className="text-gray-500 text-sm">No completed topics yet.</p>
+          </div>
         ) : (
           <div className="grid gap-3">
             {completed.map(idea => (
-              <div key={idea.id} className="bg-white rounded-xl shadow-sm p-4 border opacity-80">
+              <div key={idea.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold">{idea.title}</h3>
+                    <h3 className="font-semibold text-gray-300">{idea.title}</h3>
                     <p className="text-sm text-gray-500 mt-1">
-                      Presented by <strong>{idea.assigned_to_name}</strong>
+                      Presented by <strong className="text-gray-400">{idea.assigned_to_name}</strong>
                     </p>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_COLORS['completed']}`}>Completed</span>
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS['completed']}`}>Completed</span>
                 </div>
               </div>
             ))}
