@@ -41,13 +41,38 @@ function jsonResponse($data, $code = 200) {
     exit;
 }
 
+function getMemberName($members, $id) {
+    foreach ($members as $m) {
+        if ($m['id'] === $id) return $m['name'];
+    }
+    return null;
+}
+
+function resolveAssignees($idea, $members) {
+    // Normalize assigned_to to always be an array
+    $ids = $idea['assigned_to'] ?? [];
+    if (!is_array($ids)) {
+        $ids = $ids ? [$ids] : [];
+    }
+    $idea['assigned_to'] = $ids;
+
+    $names = [];
+    foreach ($ids as $id) {
+        $name = getMemberName($members, $id);
+        if ($name) $names[] = $name;
+    }
+    $idea['assigned_to_names'] = $names;
+    // Keep backward compat for simple display
+    $idea['assigned_to_name'] = $names ? implode(', ', $names) : null;
+    return $idea;
+}
+
 $route = $_GET['route'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 $body = json_decode(file_get_contents('php://input'), true) ?? [];
 
 // Honeypot: if the hidden "website" field has a value, it's a bot
 if (!empty($body['website'])) {
-    // Return a fake success so bots don't retry
     jsonResponse(['ok' => true]);
 }
 
@@ -80,12 +105,8 @@ if ($route === '/ideas') {
     if ($method === 'GET') {
         $result = [];
         foreach ($data['ideas'] as $idea) {
-            $idea['submitted_by_name'] = null;
-            $idea['assigned_to_name'] = null;
-            foreach ($data['members'] as $m) {
-                if ($m['id'] === $idea['submitted_by']) $idea['submitted_by_name'] = $m['name'];
-                if ($m['id'] === $idea['assigned_to']) $idea['assigned_to_name'] = $m['name'];
-            }
+            $idea['submitted_by_name'] = getMemberName($data['members'], $idea['submitted_by']);
+            $idea = resolveAssignees($idea, $data['members']);
             $idea['vote_count'] = count(array_filter($data['votes'], fn($v) => $v['idea_id'] === $idea['id']));
             $idea['comment_count'] = count(array_filter($data['comments'], fn($c) => $c['idea_id'] === $idea['id']));
             $result[] = $idea;
@@ -104,7 +125,7 @@ if ($route === '/ideas') {
             'category' => $body['category'] ?? 'General',
             'status' => 'new',
             'submitted_by' => $body['submitted_by'] ?? null,
-            'assigned_to' => null,
+            'assigned_to' => [],
             'target_date' => null,
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
@@ -127,30 +148,20 @@ if (preg_match('#^/ideas/(\d+)$#', $route, $m)) {
 
     if ($method === 'GET') {
         $idea = $data['ideas'][$ideaIdx];
-        $idea['submitted_by_name'] = null;
-        $idea['assigned_to_name'] = null;
-        foreach ($data['members'] as $mem) {
-            if ($mem['id'] === $idea['submitted_by']) $idea['submitted_by_name'] = $mem['name'];
-            if ($mem['id'] === $idea['assigned_to']) $idea['assigned_to_name'] = $mem['name'];
-        }
+        $idea['submitted_by_name'] = getMemberName($data['members'], $idea['submitted_by']);
+        $idea = resolveAssignees($idea, $data['members']);
         $idea['vote_count'] = count(array_filter($data['votes'], fn($v) => $v['idea_id'] === $id));
 
         $comments = array_values(array_filter($data['comments'], fn($c) => $c['idea_id'] === $id));
         foreach ($comments as &$c) {
-            $c['member_name'] = '';
-            foreach ($data['members'] as $mem) {
-                if ($mem['id'] === $c['member_id']) { $c['member_name'] = $mem['name']; break; }
-            }
+            $c['member_name'] = getMemberName($data['members'], $c['member_id']) ?? '';
         }
         usort($comments, fn($a, $b) => strcmp($a['created_at'], $b['created_at']));
         $idea['comments'] = $comments;
 
         $votes = array_values(array_filter($data['votes'], fn($v) => $v['idea_id'] === $id));
         foreach ($votes as &$v) {
-            $v['member_name'] = '';
-            foreach ($data['members'] as $mem) {
-                if ($mem['id'] === $v['member_id']) { $v['member_name'] = $mem['name']; break; }
-            }
+            $v['member_name'] = getMemberName($data['members'], $v['member_id']) ?? '';
         }
         $idea['votes'] = $votes;
 
@@ -164,7 +175,12 @@ if (preg_match('#^/ideas/(\d+)$#', $route, $m)) {
             }
         }
         if (array_key_exists('assigned_to', $body)) {
-            $data['ideas'][$ideaIdx]['assigned_to'] = $body['assigned_to'] ? (int)$body['assigned_to'] : null;
+            $val = $body['assigned_to'];
+            if (is_array($val)) {
+                $data['ideas'][$ideaIdx]['assigned_to'] = array_map('intval', $val);
+            } else {
+                $data['ideas'][$ideaIdx]['assigned_to'] = $val ? [(int)$val] : [];
+            }
         }
         $data['ideas'][$ideaIdx]['updated_at'] = date('Y-m-d H:i:s');
         saveData($data);
@@ -198,10 +214,7 @@ if (preg_match('#^/ideas/(\d+)/comments$#', $route, $m)) {
         $data['comments'][] = $comment;
         saveData($data);
 
-        $comment['member_name'] = '';
-        foreach ($data['members'] as $mem) {
-            if ($mem['id'] === $comment['member_id']) { $comment['member_name'] = $mem['name']; break; }
-        }
+        $comment['member_name'] = getMemberName($data['members'], $comment['member_id']) ?? '';
         jsonResponse($comment);
     }
 }

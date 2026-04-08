@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 type Member = { id: number; name: string };
 type Comment = { id: number; idea_id: number; parent_id: number | null; member_id: number; member_name: string; content: string; created_at: string };
@@ -8,7 +8,7 @@ type Vote = { id: number; idea_id: number; member_id: number; member_name: strin
 type Idea = {
   id: number; title: string; description: string; category: string;
   status: string; submitted_by: number; submitted_by_name: string;
-  assigned_to: number | null; assigned_to_name: string | null;
+  assigned_to: number[]; assigned_to_name: string | null; assigned_to_names: string[];
   target_date: string | null; vote_count: number; comment_count: number;
   created_at: string; updated_at: string;
   comments?: Comment[]; votes?: Vote[];
@@ -27,6 +27,9 @@ const STATUS_COLORS: Record<string, string> = {
   'in-progress': 'bg-orange-50 text-orange-700 border border-orange-200',
   'completed': 'bg-green-50 text-green-700 border border-green-200',
 };
+
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '/Thursdays';
 
@@ -84,6 +87,12 @@ export default function Home() {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('ai-thursdays-user');
+  };
+
+  const handleDelete = async (ideaId: number) => {
+    await api(`/ideas/${ideaId}`, { method: 'DELETE' });
+    setSelectedIdea(null);
+    loadIdeas();
   };
 
   if (!currentUser) {
@@ -153,9 +162,6 @@ export default function Home() {
       </div>
     );
   }
-
-  const assignedIdeas = ideas.filter(i => i.status === 'assigned' || i.status === 'in-progress');
-  const completedIdeas = ideas.filter(i => i.status === 'completed');
 
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -245,7 +251,7 @@ export default function Home() {
         )}
 
         {tab === 'diary' && (
-          <DiaryView assigned={assignedIdeas} completed={completedIdeas} />
+          <CalendarView ideas={ideas} />
         )}
       </div>
 
@@ -259,6 +265,7 @@ export default function Home() {
             api<Idea>(`/ideas/${selectedIdea.id}`).then(setSelectedIdea);
             loadIdeas();
           }}
+          onDelete={() => handleDelete(selectedIdea.id)}
         />
       )}
     </div>
@@ -491,21 +498,51 @@ function formatTimeAgo(dateStr: string): string {
   return date.toLocaleDateString();
 }
 
-function IdeaDetail({ idea, currentUser, members, onClose, onUpdate }: {
+function MultiSelect({ members, selected, onChange }: {
+  members: Member[]; selected: number[]; onChange: (ids: number[]) => void;
+}) {
+  const toggle = (id: number) => {
+    onChange(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id]);
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {members.map(m => {
+        const active = selected.includes(m.id);
+        return (
+          <button
+            key={m.id}
+            onClick={() => toggle(m.id)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition border ${
+              active
+                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+            }`}
+          >
+            {m.name}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }: {
   idea: Idea; currentUser: Member; members: Member[];
-  onClose: () => void; onUpdate: () => void;
+  onClose: () => void; onUpdate: () => void; onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [status, setStatus] = useState(idea.status);
-  const [assignedTo, setAssignedTo] = useState<number | string>(idea.assigned_to ?? '');
+  const [assignedTo, setAssignedTo] = useState<number[]>(idea.assigned_to ?? []);
   const [targetDate, setTargetDate] = useState(idea.target_date ?? '');
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleSave = async () => {
     await api(`/ideas/${idea.id}`, {
       method: 'PATCH',
       body: JSON.stringify({
         status,
-        assigned_to: assignedTo || null,
+        assigned_to: assignedTo,
         target_date: targetDate || null,
       }),
     });
@@ -549,15 +586,15 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate }: {
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap items-center">
                   <select value={status} onChange={e => setStatus(e.target.value)} className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm">
                     {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
                   </select>
-                  <select value={assignedTo} onChange={e => setAssignedTo(e.target.value)} className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm">
-                    <option value="">Unassigned</option>
-                    {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
                   <input type="date" value={targetDate} onChange={e => setTargetDate(e.target.value)} className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">Assign to (click to toggle):</p>
+                  <MultiSelect members={members} selected={assignedTo} onChange={setAssignedTo} />
                 </div>
                 <div className="flex gap-2">
                   <button onClick={handleSave} className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-400 transition">Save</button>
@@ -597,65 +634,170 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate }: {
               <p className="text-sm text-gray-600 py-4">No comments yet. Start the discussion!</p>
             )}
           </div>
+
+          {/* Delete */}
+          <div className="mt-6 pt-4 border-t border-gray-800">
+            {!confirmDelete ? (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="text-xs text-gray-600 hover:text-red-400 transition"
+              >
+                Delete this idea
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-red-400">Are you sure?</span>
+                <button
+                  onClick={onDelete}
+                  className="px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-medium hover:bg-red-500/30 transition"
+                >
+                  Yes, delete
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="px-3 py-1 text-gray-500 text-xs hover:text-gray-300 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function DiaryView({ assigned, completed }: { assigned: Idea[]; completed: Idea[] }) {
+function CalendarView({ ideas }: { ideas: Idea[] }) {
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    // Monday = 0
+    let startOffset = (firstDay.getDay() + 6) % 7;
+    const days: { date: Date; inMonth: boolean }[] = [];
+
+    // Days from previous month
+    for (let i = startOffset - 1; i >= 0; i--) {
+      days.push({ date: new Date(year, month, -i), inMonth: false });
+    }
+    // Days in current month
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      days.push({ date: new Date(year, month, d), inMonth: true });
+    }
+    // Fill remaining week
+    while (days.length % 7 !== 0) {
+      const nextD = days.length - startOffset - lastDay.getDate() + 1;
+      days.push({ date: new Date(year, month + 1, nextD), inMonth: false });
+    }
+    return days;
+  }, [year, month]);
+
+  const ideaByDate = useMemo(() => {
+    const map: Record<string, Idea[]> = {};
+    for (const idea of ideas) {
+      if (idea.target_date && (idea.status === 'assigned' || idea.status === 'in-progress' || idea.status === 'completed')) {
+        const key = idea.target_date;
+        if (!map[key]) map[key] = [];
+        map[key].push(idea);
+      }
+    }
+    return map;
+  }, [ideas]);
+
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+  const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-4">Active Assignments</h2>
-        {assigned.length === 0 ? (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center">
-            <p className="text-gray-500 text-sm">No active assignments. Discuss ideas on Thursday and assign topics!</p>
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {assigned.map(idea => (
-              <div key={idea.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-white">{idea.title}</h3>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Assigned to <strong className="text-gray-200">{idea.assigned_to_name}</strong>
-                      {idea.target_date && <> — present by <strong className="text-gray-200">{idea.target_date}</strong></>}
-                    </p>
-                  </div>
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
-                    {STATUS_LABELS[idea.status]}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+    <div>
+      {/* Calendar header */}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold text-white">{MONTHS[month]} {year}</h2>
+        <div className="flex gap-2">
+          <button onClick={prevMonth} className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button onClick={nextMonth} className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:border-gray-700 transition">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
       </div>
 
-      <div>
-        <h2 className="text-lg font-semibold text-white mb-4">Completed</h2>
-        {completed.length === 0 ? (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center">
-            <p className="text-gray-500 text-sm">No completed topics yet.</p>
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {completed.map(idea => (
-              <div key={idea.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-gray-300">{idea.title}</h3>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Presented by <strong className="text-gray-400">{idea.assigned_to_name}</strong>
-                    </p>
-                  </div>
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS['completed']}`}>Completed</span>
-                </div>
+      {/* Day headers */}
+      <div className="grid grid-cols-7 mb-2">
+        {DAYS.map(d => (
+          <div key={d} className="text-center text-xs font-medium text-gray-500 py-2">{d}</div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div className="grid grid-cols-7 border border-gray-800 rounded-2xl overflow-hidden">
+        {calendarDays.map(({ date, inMonth }, i) => {
+          const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          const dayIdeas = ideaByDate[dateStr] || [];
+          const isToday = dateStr === todayStr;
+          const isThursday = date.getDay() === 4;
+
+          return (
+            <div
+              key={i}
+              className={`min-h-[100px] p-2 border-t border-l border-gray-800 first:border-l-0 ${
+                !inMonth ? 'bg-gray-950/50' : 'bg-gray-900/50'
+              } ${i % 7 === 0 ? 'border-l-0' : ''} ${i < 7 ? 'border-t-0' : ''}`}
+            >
+              <div className={`text-xs mb-1 flex items-center gap-1 ${
+                isToday ? 'text-emerald-400 font-bold' : !inMonth ? 'text-gray-700' : 'text-gray-400'
+              }`}>
+                {isToday && <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs">{date.getDate()}</span>}
+                {!isToday && date.getDate()}
+                {isThursday && inMonth && <span className="text-emerald-600 text-[10px] ml-auto">THU</span>}
               </div>
-            ))}
+              {dayIdeas.map(idea => (
+                <div
+                  key={idea.id}
+                  className={`text-xs px-1.5 py-1 rounded-md mb-1 truncate ${
+                    idea.status === 'completed'
+                      ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                      : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
+                  }`}
+                  title={`${idea.title} — ${idea.assigned_to_name}`}
+                >
+                  {idea.title}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Legend / upcoming list */}
+      <div className="mt-6 space-y-3">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Upcoming Presentations</h3>
+        {ideas.filter(i => i.target_date && (i.status === 'assigned' || i.status === 'in-progress')).sort((a, b) => (a.target_date ?? '').localeCompare(b.target_date ?? '')).map(idea => (
+          <div key={idea.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-white text-sm">{idea.title}</h4>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {idea.assigned_to_name} — <span className="text-gray-400">{idea.target_date}</span>
+              </p>
+            </div>
+            <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
+              {STATUS_LABELS[idea.status]}
+            </span>
           </div>
+        ))}
+        {ideas.filter(i => i.target_date && (i.status === 'assigned' || i.status === 'in-progress')).length === 0 && (
+          <p className="text-sm text-gray-600">No upcoming presentations scheduled.</p>
         )}
       </div>
     </div>
