@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 type Member = { id: number; name: string };
-type Comment = { id: number; idea_id: number; member_id: number; member_name: string; content: string; created_at: string };
+type Comment = { id: number; idea_id: number; parent_id: number | null; member_id: number; member_name: string; content: string; created_at: string };
 type Vote = { id: number; idea_id: number; member_id: number; member_name: string };
 type Idea = {
   id: number; title: string; description: string; category: string;
@@ -347,25 +347,128 @@ function IdeaCard({ idea, onSelect, onVote }: {
   );
 }
 
+function CommentReplyBox({ ideaId, parentId, currentUser, onSubmit }: {
+  ideaId: number; parentId: number | null; currentUser: Member; onSubmit: () => void;
+}) {
+  const [text, setText] = useState('');
+
+  const handleSubmit = async () => {
+    if (!text.trim()) return;
+    await api(`/ideas/${ideaId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ content: text, member_id: currentUser.id, parent_id: parentId }),
+    });
+    setText('');
+    onSubmit();
+  };
+
+  return (
+    <div className="flex gap-2">
+      <input
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+        placeholder={parentId ? 'Write a reply...' : 'Add a comment...'}
+        autoFocus={!!parentId}
+        className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+      />
+      <button
+        onClick={handleSubmit}
+        className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-sm font-medium hover:bg-emerald-400 transition"
+      >
+        {parentId ? 'Reply' : 'Post'}
+      </button>
+    </div>
+  );
+}
+
+function CommentThread({ comment, allComments, ideaId, currentUser, depth, onUpdate }: {
+  comment: Comment; allComments: Comment[]; ideaId: number; currentUser: Member; depth: number; onUpdate: () => void;
+}) {
+  const [showReply, setShowReply] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const children = allComments.filter(c => c.parent_id === comment.id);
+  const timeAgo = formatTimeAgo(comment.created_at);
+
+  return (
+    <div className={depth > 0 ? 'ml-4 pl-4 border-l-2 border-gray-800' : ''}>
+      <div className="py-2">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-semibold shrink-0">
+            {comment.member_name?.charAt(0).toUpperCase()}
+          </div>
+          <span className="font-medium text-sm text-gray-200">{comment.member_name}</span>
+          <span className="text-xs text-gray-600">{timeAgo}</span>
+        </div>
+        <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed ml-8">{comment.content}</p>
+        <div className="flex items-center gap-3 ml-8 mt-1">
+          <button
+            onClick={() => setShowReply(!showReply)}
+            className="text-xs text-gray-500 hover:text-emerald-400 transition font-medium"
+          >
+            Reply
+          </button>
+          {children.length > 0 && (
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="text-xs text-gray-600 hover:text-gray-400 transition"
+            >
+              {collapsed ? `[+] ${children.length} ${children.length === 1 ? 'reply' : 'replies'}` : '[-]'}
+            </button>
+          )}
+        </div>
+        {showReply && (
+          <div className="ml-8 mt-2">
+            <CommentReplyBox
+              ideaId={ideaId}
+              parentId={comment.id}
+              currentUser={currentUser}
+              onSubmit={() => { setShowReply(false); onUpdate(); }}
+            />
+          </div>
+        )}
+      </div>
+      {!collapsed && children.length > 0 && (
+        <div>
+          {children.map(child => (
+            <CommentThread
+              key={child.id}
+              comment={child}
+              allComments={allComments}
+              ideaId={ideaId}
+              currentUser={currentUser}
+              depth={depth + 1}
+              onUpdate={onUpdate}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const date = new Date(dateStr + 'Z');
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
 function IdeaDetail({ idea, currentUser, members, onClose, onUpdate }: {
   idea: Idea; currentUser: Member; members: Member[];
   onClose: () => void; onUpdate: () => void;
 }) {
-  const [comment, setComment] = useState('');
   const [editing, setEditing] = useState(false);
   const [status, setStatus] = useState(idea.status);
   const [assignedTo, setAssignedTo] = useState<number | string>(idea.assigned_to ?? '');
   const [targetDate, setTargetDate] = useState(idea.target_date ?? '');
-
-  const handleComment = async () => {
-    if (!comment.trim()) return;
-    await api(`/ideas/${idea.id}/comments`, {
-      method: 'POST',
-      body: JSON.stringify({ content: comment, member_id: currentUser.id }),
-    });
-    setComment('');
-    onUpdate();
-  };
 
   const handleSave = async () => {
     await api(`/ideas/${idea.id}`, {
@@ -379,6 +482,8 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate }: {
     setEditing(false);
     onUpdate();
   };
+
+  const topLevelComments = (idea.comments ?? []).filter(c => !c.parent_id);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -438,36 +543,29 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate }: {
             </div>
           )}
 
-          <h3 className="font-semibold mb-3 text-sm text-gray-400 uppercase tracking-wide">Comments</h3>
-          <div className="space-y-3 mb-5">
-            {idea.comments?.map(c => (
-              <div key={c.id} className="border border-gray-800 rounded-xl p-4 bg-gray-800/30">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium text-sm text-gray-200">{c.member_name}</span>
-                  <span className="text-xs text-gray-600">{new Date(c.created_at).toLocaleDateString()}</span>
-                </div>
-                <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{c.content}</p>
-              </div>
-            ))}
-            {(!idea.comments || idea.comments.length === 0) && (
-              <p className="text-sm text-gray-600">No comments yet.</p>
-            )}
+          <h3 className="font-semibold mb-3 text-sm text-gray-400 uppercase tracking-wide">
+            {(idea.comments?.length ?? 0)} Comment{(idea.comments?.length ?? 0) !== 1 ? 's' : ''}
+          </h3>
+
+          <div className="mb-4">
+            <CommentReplyBox ideaId={idea.id} parentId={null} currentUser={currentUser} onSubmit={onUpdate} />
           </div>
 
-          <div className="flex gap-2">
-            <input
-              value={comment}
-              onChange={e => setComment(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleComment()}
-              placeholder="Add a comment..."
-              className="flex-1 px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
-            />
-            <button
-              onClick={handleComment}
-              className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl text-sm font-medium hover:bg-emerald-400 transition"
-            >
-              Post
-            </button>
+          <div className="divide-y divide-gray-800/50">
+            {topLevelComments.map(c => (
+              <CommentThread
+                key={c.id}
+                comment={c}
+                allComments={idea.comments ?? []}
+                ideaId={idea.id}
+                currentUser={currentUser}
+                depth={0}
+                onUpdate={onUpdate}
+              />
+            ))}
+            {topLevelComments.length === 0 && (
+              <p className="text-sm text-gray-600 py-4">No comments yet. Start the discussion!</p>
+            )}
           </div>
         </div>
       </div>

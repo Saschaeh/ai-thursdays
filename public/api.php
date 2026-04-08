@@ -183,6 +183,7 @@ if (preg_match('#^/ideas/(\d+)/comments$#', $route, $m)) {
         $comment = [
             'id' => nextId($data),
             'idea_id' => $ideaId,
+            'parent_id' => isset($body['parent_id']) ? (int)$body['parent_id'] : null,
             'member_id' => (int)$body['member_id'],
             'content' => $content,
             'created_at' => date('Y-m-d H:i:s'),
