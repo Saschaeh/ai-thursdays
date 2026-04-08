@@ -35,8 +35,12 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -p $SSH_PORT $SSH_HOST >> ~/.ssh/known_hosts 2>/dev/null
 
+          # Ensure data directory exists on server before syncing
+          ssh -i ~/.ssh/deploy_key -p $SSH_PORT $SSH_USER@$SSH_HOST \
+            "mkdir -p ~/public/Thursdays/data"
+
           rsync -avz --delete \
-            --exclude='data/' \
+            --exclude='/data' \
             -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT" \
             ./out/ \
             $SSH_USER@$SSH_HOST:~/public/Thursdays/
