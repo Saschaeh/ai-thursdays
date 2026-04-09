@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <!-- Skull: Cool pixel skull -->
+  <!-- Row 0 -->
+  <rect x="25" y="0" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="30" y="0" width="5" height="5" fill="#EEEEEE"/>
+  <rect x="35" y="0" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="40" y="0" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="45" y="0" width="5" height="5" fill="#EEEEEE"/>
+  <rect x="50" y="0" width="5" height="5" fill="#E0E0E0"/>
+  <!-- Row 1 -->
+  <rect x="20" y="5" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="25" y="5" width="5" height="5" fill="#EEEEEE"/>
+  <rect x="30" y="5" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="35" y="5" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="40" y="5" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="45" y="5" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="50" y="5" width="5" height="5" fill="#EEEEEE"/>
+  <rect x="55" y="5" width="5" height="5" fill="#BDBDBD"/>
+  <!-- Row 2 -->
+  <rect x="15" y="10" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="20" y="10" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="25" y="10" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="30" y="10" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="35" y="10" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="40" y="10" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="45" y="10" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="50" y="10" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="55" y="10" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="60" y="10" width="5" height="5" fill="#BDBDBD"/>
+  <!-- Row 3 -->
+  <rect x="10" y="15" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="15" y="15" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="20" y="15" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="25" y="15" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="30" y="15" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="35" y="15" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="40" y="15" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="45" y="15" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="50" y="15" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="55" y="15" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="60" y="15" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="65" y="15" width="5" height="5" fill="#BDBDBD"/>
+  <!-- Row 4: sunglasses -->
+  <rect x="10" y="20" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="15" y="20" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="20" y="20" width="5" height="5" fill="#111111"/>
+  <rect x="25" y="20" width="5" height="5" fill="#111111"/>
+  <rect x="30" y="20" width="5" height="5" fill="#111111"/>
+  <rect x="35" y="20" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="40" y="20" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="45" y="20" width="5" height="5" fill="#111111"/>
+  <rect x="50" y="20" width="5" height="5" fill="#111111"/>
+  <rect x="55" y="20" width="5" height="5" fill="#111111"/>
+  <rect x="60" y="20" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="65" y="20" width="5" height="5" fill="#BDBDBD"/>
+  <!-- Row 5: sunglasses -->
+  <rect x="10" y="25" width="5" height="5" fill="#111111"/>
+  <rect x="15" y="25" width="5" height="5" fill="#111111"/>
+  <rect x="20" y="25" width="5" height="5" fill="#1565C0"/>
+  <rect x="25" y="25" width="5" height="5" fill="#1E88E5"/>
+  <rect x="30" y="25" width="5" height="5" fill="#111111"/>
+  <rect x="35" y="25" width="5" height="5" fill="#111111"/>
+  <rect x="40" y="25" width="5" height="5" fill="#111111"/>
+  <rect x="45" y="25" width="5" height="5" fill="#111111"/>
+  <rect x="50" y="25" width="5" height="5" fill="#1565C0"/>
+  <rect x="55" y="25" width="5" height="5" fill="#1E88E5"/>
+  <rect x="60" y="25" width="5" height="5" fill="#111111"/>
+  <rect x="65" y="25" width="5" height="5" fill="#111111"/>
+  <!-- Row 6: sunglasses bottom -->
+  <rect x="10" y="30" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="15" y="30" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="20" y="30" width="5" height="5" fill="#111111"/>
+  <rect x="25" y="30" width="5" height="5" fill="#111111"/>
+  <rect x="30" y="30" width="5" height="5" fill="#111111"/>
+  <rect x="35" y="30" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="40" y="30" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="45" y="30" width="5" height="5" fill="#111111"/>
+  <rect x="50" y="30" width="5" height="5" fill="#111111"/>
+  <rect x="55" y="30" width="5" height="5" fill="#111111"/>
+  <rect x="60" y="30" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="65" y="30" width="5" height="5" fill="#BDBDBD"/>
+  <!-- Row 7: nose -->
+  <rect x="15" y="35" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="20" y="35" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="25" y="35" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="30" y="35" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="35" y="35" width="5" height="5" fill="#424242"/>
+  <rect x="40" y="35" width="5" height="5" fill="#424242"/>
+  <rect x="45" y="35" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="50" y="35" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="55" y="35" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="60" y="35" width="5" height="5" fill="#BDBDBD"/>
+  <!-- Row 8: nose bottom -->
+  <rect x="15" y="40" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="20" y="40" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="25" y="40" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="30" y="40" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="35" y="40" width="5" height="5" fill="#616161"/>
+  <rect x="40" y="40" width="5" height="5" fill="#616161"/>
+  <rect x="45" y="40" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="50" y="40" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="55" y="40" width="5" height="5" fill="#F5F5F5"/>
+  <rect x="60" y="40" width="5" height="5" fill="#BDBDBD"/>
+  <!-- Row 9: teeth top -->
+  <rect x="15" y="45" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="20" y="45" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="25" y="45" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="30" y="45" width="5" height="5" fill="#424242"/>
+  <rect x="35" y="45" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="40" y="45" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="45" y="45" width="5" height="5" fill="#424242"/>
+  <rect x="50" y="45" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="55" y="45" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="60" y="45" width="5" height="5" fill="#BDBDBD"/>
+  <!-- Row 10: teeth bottom -->
+  <rect x="20" y="50" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="25" y="50" width="5" height="5" fill="#424242"/>
+  <rect x="30" y="50" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="35" y="50" width="5" height="5" fill="#424242"/>
+  <rect x="40" y="50" width="5" height="5" fill="#424242"/>
+  <rect x="45" y="50" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="50" y="50" width="5" height="5" fill="#424242"/>
+  <rect x="55" y="50" width="5" height="5" fill="#BDBDBD"/>
+  <!-- Row 11: jaw -->
+  <rect x="25" y="55" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="30" y="55" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="35" y="55" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="40" y="55" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="45" y="55" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="50" y="55" width="5" height="5" fill="#BDBDBD"/>
+  <!-- Row 12: crossbones -->
+  <rect x="10" y="60" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="15" y="60" width="5" height="5" fill="#EEEEEE"/>
+  <rect x="30" y="60" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="35" y="60" width="5" height="5" fill="#9E9E9E"/>
+  <rect x="40" y="60" width="5" height="5" fill="#9E9E9E"/>
+  <rect x="45" y="60" width="5" height="5" fill="#BDBDBD"/>
+  <rect x="60" y="60" width="5" height="5" fill="#EEEEEE"/>
+  <rect x="65" y="60" width="5" height="5" fill="#E0E0E0"/>
+  <!-- Row 13 -->
+  <rect x="20" y="65" width="5" height="5" fill="#EEEEEE"/>
+  <rect x="25" y="65" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="35" y="65" width="5" height="5" fill="#9E9E9E"/>
+  <rect x="40" y="65" width="5" height="5" fill="#9E9E9E"/>
+  <rect x="50" y="65" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="55" y="65" width="5" height="5" fill="#EEEEEE"/>
+  <!-- Row 14 -->
+  <rect x="30" y="70" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="35" y="70" width="5" height="5" fill="#EEEEEE"/>
+  <rect x="40" y="70" width="5" height="5" fill="#EEEEEE"/>
+  <rect x="45" y="70" width="5" height="5" fill="#E0E0E0"/>
+  <!-- Row 15 -->
+  <rect x="20" y="75" width="5" height="5" fill="#EEEEEE"/>
+  <rect x="25" y="75" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="50" y="75" width="5" height="5" fill="#E0E0E0"/>
+  <rect x="55" y="75" width="5" height="5" fill="#EEEEEE"/>
+</svg>
