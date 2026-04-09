@@ -381,15 +381,15 @@ export default function Home() {
         </div>
       </div>
 
-      {!currentUser.avatar && (
+      {!currentUser.avatar && tab !== 'profile' && (
         <div className="max-w-5xl mx-auto px-6 mt-4">
           <button
             onClick={() => setTab('profile')}
             className="w-full flex items-center gap-3 px-5 py-3 bg-amber-500/10 border border-amber-500/30 rounded-xl hover:bg-amber-500/20 transition"
           >
             <span className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 text-lg shrink-0">!</span>
-            <span className="text-sm text-amber-300 font-medium">You haven&apos;t picked an avatar yet! Head to your profile and choose one.</span>
-            <span className="ml-auto text-xs text-amber-500/70">Go to Profile &rarr;</span>
+            <span className="text-sm text-amber-300 font-medium">You haven&apos;t picked an avatar yet, you filthy animal.</span>
+            <span className="ml-auto text-xs text-amber-500/70">Pick one &rarr;</span>
           </button>
         </div>
       )}
