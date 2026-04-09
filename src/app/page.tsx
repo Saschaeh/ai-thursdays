@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
-type Member = { id: number; name: string };
+type Member = { id: number; name: string; email?: string };
 type Comment = { id: number; idea_id: number; parent_id: number | null; member_id: number; member_name: string; content: string; created_at: string };
+type Notification = { id: number; member_id: number; type: string; message: string; idea_id: number | null; read: boolean; created_at: string };
 type Vote = { id: number; idea_id: number; member_id: number; member_name: string };
 type Idea = {
   id: number; title: string; description: string; category: string;
@@ -51,6 +52,10 @@ export default function Home() {
   const [nameInput, setNameInput] = useState('');
   const [showNewMember, setShowNewMember] = useState(false);
   const [hp, setHp] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const loadIdeas = useCallback(async () => {
     const data = await api<Idea[]>('/ideas');
@@ -62,10 +67,26 @@ export default function Home() {
     setMembers(data);
   }, []);
 
+  const loadNotifications = useCallback(async () => {
+    if (!currentUser) return;
+    const res = await fetch(`${BASE}/api.php?route=${encodeURIComponent('/notifications')}&member_id=${currentUser.id}`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data: Notification[] = await res.json();
+    setNotifications(data);
+  }, [currentUser]);
+
   useEffect(() => {
     loadMembers();
     loadIdeas();
   }, [loadIdeas, loadMembers]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [currentUser, loadNotifications]);
 
   const selectUser = (member: Member) => {
     setCurrentUser(member);
@@ -76,13 +97,35 @@ export default function Home() {
     if (!nameInput.trim() || hp) return;
     const member = await api<Member>('/members', {
       method: 'POST',
-      body: JSON.stringify({ name: nameInput.trim(), website: hp }),
+      body: JSON.stringify({ name: nameInput.trim(), email: emailInput.trim(), website: hp }),
     });
     selectUser(member);
     setNameInput('');
+    setEmailInput('');
     setShowNewMember(false);
     loadMembers();
   };
+
+  const markAllRead = async () => {
+    if (!currentUser) return;
+    await fetch(`${BASE}/api.php?route=${encodeURIComponent('/notifications/read-all')}&member_id=${currentUser.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    loadNotifications();
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -131,14 +174,22 @@ export default function Home() {
                 + New member
               </button>
             ) : (
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <input
                   value={nameInput}
                   onChange={e => setNameInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleNewMember()}
                   placeholder="Your name"
                   autoFocus
-                  className="flex-1 px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+                />
+                <input
+                  value={emailInput}
+                  onChange={e => setEmailInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleNewMember()}
+                  placeholder="Email (optional — for notifications)"
+                  type="email"
+                  className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
                 />
                 <input
                   value={hp}
@@ -151,7 +202,7 @@ export default function Home() {
                 />
                 <button
                   onClick={handleNewMember}
-                  className="px-5 py-2.5 bg-emerald-500 text-white font-medium rounded-xl hover:bg-emerald-400 transition"
+                  className="w-full px-5 py-2.5 bg-emerald-500 text-white font-medium rounded-xl hover:bg-emerald-400 transition"
                 >
                   Join
                 </button>
@@ -175,6 +226,64 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-400">Hi, <strong className="text-gray-200">{currentUser.name}</strong></span>
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 text-gray-400 hover:text-white transition"
+                title="Notifications"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4.5 h-4.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center min-w-[18px] h-[18px]">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {showNotifications && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+                    <span className="text-sm font-semibold text-white">Notifications</span>
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-xs text-emerald-400 hover:text-emerald-300 transition">
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <p className="text-sm text-gray-600 text-center py-6">No notifications yet</p>
+                    ) : (
+                      notifications.slice(0, 20).map(n => (
+                        <div
+                          key={n.id}
+                          className={`px-4 py-3 border-b border-gray-800/50 cursor-pointer hover:bg-gray-800/50 transition ${!n.read ? 'bg-gray-800/30' : ''}`}
+                          onClick={async () => {
+                            if (!n.read) {
+                              await api(`/notifications/${n.id}`, { method: 'PATCH' });
+                              loadNotifications();
+                            }
+                            if (n.idea_id) {
+                              api<Idea>(`/ideas/${n.idea_id}`).then(setSelectedIdea);
+                              setShowNotifications(false);
+                            }
+                          }}
+                        >
+                          <div className="flex items-start gap-2">
+                            {!n.read && <span className="w-2 h-2 mt-1.5 rounded-full bg-emerald-500 shrink-0" />}
+                            <div className={!n.read ? '' : 'ml-4'}>
+                              <p className="text-sm text-gray-300">{n.message}</p>
+                              <p className="text-xs text-gray-600 mt-0.5">{formatTimeAgo(n.created_at)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-gray-300 transition">
               Switch user
             </button>

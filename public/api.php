@@ -19,9 +19,11 @@ $dataFile = $dataDir . '/db.json';
 function loadData() {
     global $dataFile;
     if (!file_exists($dataFile)) {
-        return ['members' => [], 'ideas' => [], 'comments' => [], 'votes' => [], 'next_id' => 1];
+        return ['members' => [], 'ideas' => [], 'comments' => [], 'votes' => [], 'notifications' => [], 'next_id' => 1];
     }
-    return json_decode(file_get_contents($dataFile), true);
+    $data = json_decode(file_get_contents($dataFile), true);
+    if (!isset($data['notifications'])) $data['notifications'] = [];
+    return $data;
 }
 
 function saveData($data) {
@@ -67,6 +69,63 @@ function resolveAssignees($idea, $members) {
     return $idea;
 }
 
+function createNotification(&$data, $memberId, $type, $message, $ideaId = null) {
+    $notif = [
+        'id' => nextId($data),
+        'member_id' => (int)$memberId,
+        'type' => $type,
+        'message' => $message,
+        'idea_id' => $ideaId,
+        'read' => false,
+        'created_at' => date('Y-m-d H:i:s'),
+    ];
+    $data['notifications'][] = $notif;
+    // Try to send email
+    sendNotificationEmail($data, $memberId, $message);
+    return $notif;
+}
+
+function sendNotificationEmail($data, $memberId, $message) {
+    $configFile = __DIR__ . '/smtp-config.php';
+    if (!file_exists($configFile)) return;
+    $config = require $configFile;
+    if (empty($config['enabled'])) return;
+
+    // Find member email
+    $email = null;
+    foreach ($data['members'] as $m) {
+        if ($m['id'] === (int)$memberId && !empty($m['email'])) {
+            $email = $m['email'];
+            break;
+        }
+    }
+    if (!$email) return;
+
+    // Use PHPMailer if available
+    $autoload = __DIR__ . '/vendor/autoload.php';
+    if (file_exists($autoload)) {
+        require_once $autoload;
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+        try {
+            $mail->isSMTP();
+            $mail->Host = $config['host'];
+            $mail->SMTPAuth = true;
+            $mail->Username = $config['username'];
+            $mail->Password = $config['password'];
+            $mail->SMTPSecure = $config['encryption'] ?? 'tls';
+            $mail->Port = $config['port'] ?? 587;
+            $mail->setFrom($config['from_email'], $config['from_name'] ?? 'AI Thursdays');
+            $mail->addAddress($email);
+            $mail->isHTML(false);
+            $mail->Subject = 'AI Thursdays Notification';
+            $mail->Body = $message;
+            $mail->send();
+        } catch (\Exception $e) {
+            // Silently fail — don't break the API
+        }
+    }
+}
+
 $route = $_GET['route'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 $body = json_decode(file_get_contents('php://input'), true) ?? [];
@@ -93,7 +152,7 @@ if ($route === '/members') {
             if (strcasecmp($m['name'], $name) === 0) jsonResponse($m);
         }
 
-        $member = ['id' => nextId($data), 'name' => $name, 'created_at' => date('Y-m-d H:i:s')];
+        $member = ['id' => nextId($data), 'name' => $name, 'email' => trim($body['email'] ?? ''), 'created_at' => date('Y-m-d H:i:s')];
         $data['members'][] = $member;
         saveData($data);
         jsonResponse($member);
@@ -169,6 +228,9 @@ if (preg_match('#^/ideas/(\d+)$#', $route, $m)) {
     }
 
     if ($method === 'PATCH') {
+        $oldAssignees = $data['ideas'][$ideaIdx]['assigned_to'] ?? [];
+        if (!is_array($oldAssignees)) $oldAssignees = $oldAssignees ? [$oldAssignees] : [];
+
         foreach (['title', 'description', 'category', 'status', 'target_date'] as $key) {
             if (array_key_exists($key, $body)) {
                 $data['ideas'][$ideaIdx][$key] = $body[$key];
@@ -183,6 +245,17 @@ if (preg_match('#^/ideas/(\d+)$#', $route, $m)) {
             }
         }
         $data['ideas'][$ideaIdx]['updated_at'] = date('Y-m-d H:i:s');
+
+        // Notify newly assigned members
+        $newAssignees = $data['ideas'][$ideaIdx]['assigned_to'] ?? [];
+        if (!is_array($newAssignees)) $newAssignees = $newAssignees ? [$newAssignees] : [];
+        $ideaTitle = $data['ideas'][$ideaIdx]['title'];
+        foreach ($newAssignees as $assigneeId) {
+            if (!in_array($assigneeId, $oldAssignees)) {
+                createNotification($data, $assigneeId, 'assigned', "You were assigned to \"$ideaTitle\"", $id);
+            }
+        }
+
         saveData($data);
         jsonResponse($data['ideas'][$ideaIdx]);
     }
@@ -212,6 +285,28 @@ if (preg_match('#^/ideas/(\d+)/comments$#', $route, $m)) {
             'created_at' => date('Y-m-d H:i:s'),
         ];
         $data['comments'][] = $comment;
+
+        // Notify: find the idea to get submitter and assignees
+        $commenterName = getMemberName($data['members'], $comment['member_id']) ?? 'Someone';
+        foreach ($data['ideas'] as $idea) {
+            if ($idea['id'] === $ideaId) {
+                $ideaTitle = $idea['title'];
+                // Notify submitter (if not the commenter)
+                if ($idea['submitted_by'] && $idea['submitted_by'] !== $comment['member_id']) {
+                    createNotification($data, $idea['submitted_by'], 'comment', "$commenterName commented on \"$ideaTitle\"", $ideaId);
+                }
+                // Notify assignees (if not the commenter)
+                $assignees = $idea['assigned_to'] ?? [];
+                if (!is_array($assignees)) $assignees = $assignees ? [$assignees] : [];
+                foreach ($assignees as $assigneeId) {
+                    if ($assigneeId !== $comment['member_id'] && $assigneeId !== $idea['submitted_by']) {
+                        createNotification($data, $assigneeId, 'comment', "$commenterName commented on \"$ideaTitle\"", $ideaId);
+                    }
+                }
+                break;
+            }
+        }
+
         saveData($data);
 
         $comment['member_name'] = getMemberName($data['members'], $comment['member_id']) ?? '';
@@ -246,6 +341,63 @@ if (preg_match('#^/ideas/(\d+)/votes$#', $route, $m)) {
             saveData($data);
             jsonResponse(['voted' => true]);
         }
+    }
+}
+
+// Route: /notifications?member_id=X
+if ($route === '/notifications') {
+    $memberId = (int)($_GET['member_id'] ?? 0);
+    if ($method === 'GET' && $memberId) {
+        $notifs = array_values(array_filter($data['notifications'], fn($n) => $n['member_id'] === $memberId));
+        usort($notifs, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+        jsonResponse($notifs);
+    }
+}
+
+// Route: /notifications/read-all?member_id=X
+if ($route === '/notifications/read-all') {
+    $memberId = (int)($_GET['member_id'] ?? ($body['member_id'] ?? 0));
+    if ($method === 'POST' && $memberId) {
+        foreach ($data['notifications'] as &$n) {
+            if ($n['member_id'] === $memberId) $n['read'] = true;
+        }
+        unset($n);
+        saveData($data);
+        jsonResponse(['ok' => true]);
+    }
+}
+
+// Route: /notifications/:id
+if (preg_match('#^/notifications/(\d+)$#', $route, $m)) {
+    $nId = (int)$m[1];
+    if ($method === 'PATCH') {
+        foreach ($data['notifications'] as &$n) {
+            if ($n['id'] === $nId) {
+                $n['read'] = true;
+                break;
+            }
+        }
+        unset($n);
+        saveData($data);
+        jsonResponse(['ok' => true]);
+    }
+}
+
+// Route: /members/:id (update email)
+if (preg_match('#^/members/(\d+)$#', $route, $m)) {
+    $mId = (int)$m[1];
+    if ($method === 'PATCH') {
+        foreach ($data['members'] as &$member) {
+            if ($member['id'] === $mId) {
+                if (array_key_exists('email', $body)) {
+                    $member['email'] = trim($body['email']);
+                }
+                break;
+            }
+        }
+        unset($member);
+        saveData($data);
+        jsonResponse(['ok' => true]);
     }
 }
 
