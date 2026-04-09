@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <!-- Lion: Golden/Amber Lion -->
+  <!-- Row 0: mane top -->
+  <rect x="10" y="0" width="10" height="10" fill="#E65100"/>
+  <rect x="20" y="0" width="10" height="10" fill="#FF8F00"/>
+  <rect x="30" y="0" width="10" height="10" fill="#FF8F00"/>
+  <rect x="40" y="0" width="10" height="10" fill="#FF8F00"/>
+  <rect x="50" y="0" width="10" height="10" fill="#FF8F00"/>
+  <rect x="60" y="0" width="10" height="10" fill="#E65100"/>
+  <!-- Row 1: mane + head -->
+  <rect x="0" y="10" width="10" height="10" fill="#E65100"/>
+  <rect x="10" y="10" width="10" height="10" fill="#FF8F00"/>
+  <rect x="20" y="10" width="10" height="10" fill="#FFB300"/>
+  <rect x="30" y="10" width="10" height="10" fill="#FFD54F"/>
+  <rect x="40" y="10" width="10" height="10" fill="#FFD54F"/>
+  <rect x="50" y="10" width="10" height="10" fill="#FFB300"/>
+  <rect x="60" y="10" width="10" height="10" fill="#FF8F00"/>
+  <rect x="70" y="10" width="10" height="10" fill="#E65100"/>
+  <!-- Row 2: eyes -->
+  <rect x="0" y="20" width="10" height="10" fill="#FF8F00"/>
+  <rect x="10" y="20" width="10" height="10" fill="#FFD54F"/>
+  <rect x="20" y="20" width="10" height="10" fill="#212121"/>
+  <rect x="30" y="20" width="10" height="10" fill="#FFD54F"/>
+  <rect x="40" y="20" width="10" height="10" fill="#FFD54F"/>
+  <rect x="50" y="20" width="10" height="10" fill="#212121"/>
+  <rect x="60" y="20" width="10" height="10" fill="#FFD54F"/>
+  <rect x="70" y="20" width="10" height="10" fill="#FF8F00"/>
+  <!-- Row 3: nose/mouth -->
+  <rect x="0" y="30" width="10" height="10" fill="#E65100"/>
+  <rect x="10" y="30" width="10" height="10" fill="#FFD54F"/>
+  <rect x="20" y="30" width="10" height="10" fill="#FFD54F"/>
+  <rect x="30" y="30" width="10" height="10" fill="#795548"/>
+  <rect x="40" y="30" width="10" height="10" fill="#795548"/>
+  <rect x="50" y="30" width="10" height="10" fill="#FFD54F"/>
+  <rect x="60" y="30" width="10" height="10" fill="#FFD54F"/>
+  <rect x="70" y="30" width="10" height="10" fill="#E65100"/>
+  <!-- Row 4: chin -->
+  <rect x="10" y="40" width="10" height="10" fill="#FF8F00"/>
+  <rect x="20" y="40" width="10" height="10" fill="#FFD54F"/>
+  <rect x="30" y="40" width="10" height="10" fill="#FFF9C4"/>
+  <rect x="40" y="40" width="10" height="10" fill="#FFF9C4"/>
+  <rect x="50" y="40" width="10" height="10" fill="#FFD54F"/>
+  <rect x="60" y="40" width="10" height="10" fill="#FF8F00"/>
+  <!-- Row 5: body -->
+  <rect x="20" y="50" width="10" height="10" fill="#FFB300"/>
+  <rect x="30" y="50" width="10" height="10" fill="#FFD54F"/>
+  <rect x="40" y="50" width="10" height="10" fill="#FFD54F"/>
+  <rect x="50" y="50" width="10" height="10" fill="#FFB300"/>
+  <!-- Row 6: body lower -->
+  <rect x="20" y="60" width="10" height="10" fill="#FF8F00"/>
+  <rect x="30" y="60" width="10" height="10" fill="#FFB300"/>
+  <rect x="40" y="60" width="10" height="10" fill="#FFB300"/>
+  <rect x="50" y="60" width="10" height="10" fill="#FF8F00"/>
+  <!-- Row 7: paws -->
+  <rect x="10" y="70" width="10" height="10" fill="#E65100"/>
+  <rect x="20" y="70" width="10" height="10" fill="#FF8F00"/>
+  <rect x="50" y="70" width="10" height="10" fill="#FF8F00"/>
+  <rect x="60" y="70" width="10" height="10" fill="#E65100"/>
+</svg>
