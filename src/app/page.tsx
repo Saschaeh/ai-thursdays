@@ -416,7 +416,7 @@ export default function Home() {
             )}
 
             <div className="grid gap-3">
-              {ideas.map(idea => (
+              {[...ideas].sort((a, b) => b.vote_count - a.vote_count).map(idea => (
                 <IdeaCard
                   key={idea.id}
                   idea={idea}
