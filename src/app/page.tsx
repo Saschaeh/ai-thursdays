@@ -158,7 +158,8 @@ export default function Home() {
     loadNotifications();
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const needsAvatar = !currentUser?.avatar;
+  const unreadCount = notifications.filter(n => !n.read).length + (needsAvatar ? 1 : 0);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -298,7 +299,21 @@ export default function Home() {
                     )}
                   </div>
                   <div className="max-h-80 overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {needsAvatar && (
+                      <div
+                        className="px-4 py-3 border-b border-gray-800/50 cursor-pointer hover:bg-amber-500/10 transition bg-amber-500/5"
+                        onClick={() => { setTab('profile'); setShowNotifications(false); }}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="w-2 h-2 mt-1.5 rounded-full bg-amber-500 shrink-0" />
+                          <div>
+                            <p className="text-sm text-amber-300 font-medium">Select your avatar!</p>
+                            <p className="text-xs text-gray-600 mt-0.5">Pick a pixel art avatar for your profile</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {notifications.length === 0 && !needsAvatar ? (
                       <p className="text-sm text-gray-600 text-center py-6">No notifications yet</p>
                     ) : (
                       notifications.slice(0, 20).map(n => (
@@ -365,6 +380,19 @@ export default function Home() {
           </button>
         </div>
       </div>
+
+      {!currentUser.avatar && (
+        <div className="max-w-5xl mx-auto px-6 mt-4">
+          <button
+            onClick={() => setTab('profile')}
+            className="w-full flex items-center gap-3 px-5 py-3 bg-amber-500/10 border border-amber-500/30 rounded-xl hover:bg-amber-500/20 transition"
+          >
+            <span className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 text-lg shrink-0">!</span>
+            <span className="text-sm text-amber-300 font-medium">You haven&apos;t picked an avatar yet! Head to your profile and choose one.</span>
+            <span className="ml-auto text-xs text-amber-500/70">Go to Profile &rarr;</span>
+          </button>
+        </div>
+      )}
 
       <div className="max-w-5xl mx-auto px-6 py-6">
         {tab === 'ideas' && (
