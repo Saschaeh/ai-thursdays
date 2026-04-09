@@ -69,7 +69,7 @@ function resolveAssignees($idea, $members) {
     return $idea;
 }
 
-function createNotification(&$data, $memberId, $type, $message, $ideaId = null) {
+function createNotification(&$data, $memberId, $type, $message, $ideaId = null, $actorId = null) {
     $notif = [
         'id' => nextId($data),
         'member_id' => (int)$memberId,
@@ -80,8 +80,19 @@ function createNotification(&$data, $memberId, $type, $message, $ideaId = null) 
         'created_at' => date('Y-m-d H:i:s'),
     ];
     $data['notifications'][] = $notif;
-    // Try to send email
-    sendNotificationEmail($data, $memberId, $message);
+    // Send email from the actor who triggered the notification
+    $actorEmail = null;
+    $actorName = null;
+    if ($actorId) {
+        foreach ($data['members'] as $m) {
+            if ($m['id'] === (int)$actorId) {
+                $actorEmail = $m['email'] ?? null;
+                $actorName = $m['name'] ?? null;
+                break;
+            }
+        }
+    }
+    sendNotificationEmail($data, $memberId, $message, $actorEmail, $actorName);
     return $notif;
 }
 
@@ -95,7 +106,7 @@ function loadSmtpConfig() {
     return $config;
 }
 
-function sendNotificationEmail($data, $memberId, $message) {
+function sendNotificationEmail($data, $memberId, $message, $actorEmail = null, $actorName = null) {
     $config = loadSmtpConfig();
     if (!$config || empty($config['enabled'])) return;
 
@@ -112,8 +123,9 @@ function sendNotificationEmail($data, $memberId, $message) {
     $port = $config['port'] ?? 587;
     $user = $config['username'];
     $pass = $config['password'];
-    $from = $config['from_email'];
-    $fromName = $config['from_name'] ?? 'AI Thursdays';
+    // Use actor's email as sender, fall back to config
+    $from = $actorEmail ?: $config['from_email'];
+    $fromName = $actorName ? "$actorName via Idle Tuesday" : ($config['from_name'] ?? 'AI Thursdays');
     $subject = 'Idle Tuesday on Thursdays';
 
     try {
@@ -319,13 +331,14 @@ if (preg_match('#^/ideas/(\d+)$#', $route, $m)) {
         }
         $data['ideas'][$ideaIdx]['updated_at'] = date('Y-m-d H:i:s');
 
-        // Notify newly assigned members
+        // Notify newly assigned members (use idea submitter as the actor)
         $newAssignees = $data['ideas'][$ideaIdx]['assigned_to'] ?? [];
         if (!is_array($newAssignees)) $newAssignees = $newAssignees ? [$newAssignees] : [];
         $ideaTitle = $data['ideas'][$ideaIdx]['title'];
+        $submitter = $data['ideas'][$ideaIdx]['submitted_by'] ?? null;
         foreach ($newAssignees as $assigneeId) {
             if (!in_array($assigneeId, $oldAssignees)) {
-                createNotification($data, $assigneeId, 'assigned', "You were assigned to \"$ideaTitle\"", $id);
+                createNotification($data, $assigneeId, 'assigned', "You were assigned to \"$ideaTitle\"", $id, $submitter);
             }
         }
 
@@ -367,7 +380,7 @@ if (preg_match('#^/ideas/(\d+)/comments$#', $route, $m)) {
                 $ideaTitle = $idea['title'];
                 // Notify submitter
                 if ($idea['submitted_by'] && $idea['submitted_by'] !== $comment['member_id']) {
-                    createNotification($data, $idea['submitted_by'], 'comment', "$commenterName commented on \"$ideaTitle\"", $ideaId);
+                    createNotification($data, $idea['submitted_by'], 'comment', "$commenterName commented on \"$ideaTitle\"", $ideaId, $comment['member_id']);
                     $notified[] = $idea['submitted_by'];
                 }
                 // Notify all assignees (skip commenter and already-notified submitter)
@@ -375,7 +388,7 @@ if (preg_match('#^/ideas/(\d+)/comments$#', $route, $m)) {
                 if (!is_array($assignees)) $assignees = $assignees ? [$assignees] : [];
                 foreach ($assignees as $assigneeId) {
                     if ($assigneeId !== $comment['member_id'] && !in_array($assigneeId, $notified)) {
-                        createNotification($data, $assigneeId, 'comment', "$commenterName commented on \"$ideaTitle\"", $ideaId);
+                        createNotification($data, $assigneeId, 'comment', "$commenterName commented on \"$ideaTitle\"", $ideaId, $comment['member_id']);
                     }
                 }
                 break;
@@ -529,66 +542,6 @@ if (preg_match('#^/members/(\d+)$#', $route, $m)) {
         }
         jsonResponse(['ok' => true]);
     }
-}
-
-// Temp debug
-if ($route === '/test-email') {
-    $mid = (int)($_GET['member_id'] ?? 0);
-    if (!$mid) jsonResponse(['error' => 'need member_id'], 400);
-    $log = [];
-    $config = loadSmtpConfig();
-    $email = null;
-    foreach ($data['members'] as $m) {
-        if ($m['id'] === $mid) { $email = $m['email'] ?? ''; break; }
-    }
-    if (!$email) jsonResponse(['error' => 'no email for member']);
-
-    // Inline SMTP with full logging
-    $host = $config['host'];
-    $port = $config['port'];
-    $sock = @fsockopen($host, $port, $errno, $errstr, 10);
-    if (!$sock) { jsonResponse(['error' => "connect failed: $errno $errstr"]); }
-
-    $read = function() use ($sock) { return trim(fgets($sock, 512)); };
-    $send = function($cmd) use ($sock, $read, &$log) {
-        fwrite($sock, $cmd . "\r\n");
-        $r = $read();
-        $log[] = "> " . (strlen($cmd) > 50 ? substr($cmd, 0, 50) . '...' : $cmd) . " => $r";
-        return $r;
-    };
-
-    $log[] = "greeting: " . $read();
-    $send("EHLO localhost");
-    stream_set_timeout($sock, 2);
-    while ($line = fgets($sock, 512)) { if (substr(trim($line), 3, 1) === ' ') break; }
-
-    $send("STARTTLS");
-    stream_set_blocking($sock, true);
-    $tls = @stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
-    $log[] = "TLS: " . ($tls ? "OK" : "FAILED");
-    if (!$tls) { fclose($sock); jsonResponse(['log' => $log]); }
-
-    $send("EHLO localhost");
-    while ($line = fgets($sock, 512)) { if (substr(trim($line), 3, 1) === ' ') break; }
-
-    $send("AUTH LOGIN");
-    $send(base64_encode($config['username']));
-    $send(base64_encode($config['password']));
-
-    $from = $config['from_email'];
-    $fromName = $config['from_name'];
-    // Try with saschaeh@gmail.com as sender to test deliverability
-    $testFrom = 'saschaeh@gmail.com';
-    $send("MAIL FROM:<$testFrom>");
-    $send("RCPT TO:<$email>");
-    $send("DATA");
-
-    $body = "From: $fromName <$testFrom>\r\nTo: $email\r\nSubject: Test Email - Idle Tuesday\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\nThis is a test email sent at " . date('Y-m-d H:i:s') . " to verify notifications work.";
-    $send($body . "\r\n.");
-    $send("QUIT");
-    fclose($sock);
-
-    jsonResponse(['to' => $email, 'log' => $log]);
 }
 
 http_response_code(404);
