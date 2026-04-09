@@ -364,6 +364,7 @@ export default function Home() {
                 <IdeaCard
                   key={idea.id}
                   idea={idea}
+                  members={members}
                   onSelect={() => {
                     api<Idea>(`/ideas/${idea.id}`).then(setSelectedIdea);
                   }}
@@ -483,35 +484,41 @@ function NewIdeaForm({ currentUser, onSubmit, onCancel }: {
   );
 }
 
-function IdeaCard({ idea, onSelect, onVote }: {
-  idea: Idea; onSelect: () => void; onVote: () => void;
+function IdeaCard({ idea, members, onSelect, onVote }: {
+  idea: Idea; members: Member[]; onSelect: () => void; onVote: () => void;
 }) {
+  const submitter = members.find(m => m.name === idea.submitted_by_name);
   return (
     <div
       className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition cursor-pointer group"
       onClick={onSelect}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-4">
+        <div className="shrink-0 pt-0.5">
+          <Avatar member={submitter || { name: idea.submitted_by_name || '?' }} size="lg" />
+        </div>
         <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <h3 className="font-semibold text-white group-hover:text-emerald-400 transition">{idea.title}</h3>
+          </div>
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <h3 className="font-semibold text-white truncate group-hover:text-emerald-400 transition">{idea.title}</h3>
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
               {STATUS_LABELS[idea.status]}
             </span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">{idea.category}</span>
+            <span className="text-xs text-gray-500">by <span className="text-gray-400">{idea.submitted_by_name}</span></span>
           </div>
           {idea.description && (
             <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">{idea.description}</p>
           )}
-          <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-            <span>by <span className="text-gray-400">{idea.submitted_by_name}</span></span>
+          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
             {idea.assigned_to_name && <span>assigned to <strong className="text-gray-400">{idea.assigned_to_name}</strong></span>}
             {idea.comment_count > 0 && <span>{idea.comment_count} comment{idea.comment_count !== 1 ? 's' : ''}</span>}
           </div>
         </div>
         <button
           onClick={e => { e.stopPropagation(); onVote(); }}
-          className="flex flex-col items-center px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:border-emerald-500/50 hover:bg-gray-750 transition text-sm min-w-[52px]"
+          className="flex flex-col items-center px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:border-emerald-500/50 hover:bg-gray-750 transition text-sm min-w-[52px] shrink-0"
           title="Click to toggle your vote"
         >
           <svg className="w-4 h-4 text-emerald-500 mb-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3l-7 7h4v7h6v-7h4L10 3z"/></svg>
