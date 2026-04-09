@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
-type Member = { id: number; name: string; email?: string };
+type Member = { id: number; name: string; email?: string; avatar?: string; created_at?: string };
 type Comment = { id: number; idea_id: number; parent_id: number | null; member_id: number; member_name: string; content: string; created_at: string };
 type Notification = { id: number; member_id: number; type: string; message: string; idea_id: number | null; read: boolean; created_at: string };
 type Vote = { id: number; idea_id: number; member_id: number; member_name: string };
@@ -34,6 +34,18 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '/Thursdays';
 
+function Avatar({ member, size = 'md' }: { member: { name: string; avatar?: string }; size?: 'sm' | 'md' | 'lg' }) {
+  const sizeClasses = { sm: 'w-6 h-6 text-xs', md: 'w-8 h-8 text-sm', lg: 'w-16 h-16 text-2xl' };
+  if (member.avatar) {
+    return <img src={`${BASE}/avatars/${member.avatar}`} alt={member.name} className={`${sizeClasses[size]} rounded-full`} />;
+  }
+  return (
+    <div className={`${sizeClasses[size]} rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-semibold shrink-0`}>
+      {member.name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}/api.php?route=${encodeURIComponent(path)}`, {
     headers: { 'Content-Type': 'application/json' },
@@ -46,7 +58,7 @@ export default function Home() {
   const [members, setMembers] = useState<Member[]>([]);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [ideas, setIdeas] = useState<Idea[]>([]);
-  const [tab, setTab] = useState<'ideas' | 'diary'>('ideas');
+  const [tab, setTab] = useState<'ideas' | 'diary' | 'profile'>('ideas');
   const [showNewIdea, setShowNewIdea] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   const [nameInput, setNameInput] = useState('');
@@ -158,9 +170,7 @@ export default function Home() {
                     onClick={() => selectUser(m)}
                     className="w-full flex items-center gap-3 px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white hover:border-emerald-500/50 hover:bg-gray-800/80 transition text-left"
                   >
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-sm font-semibold">
-                      {m.name.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar member={m} />
                     <span className="font-medium">{m.name}</span>
                   </button>
                 ))}
@@ -225,7 +235,10 @@ export default function Home() {
             <h1 className="text-lg font-semibold text-white tracking-tight">AI Thursdays</h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-400">Hi, <strong className="text-gray-200">{currentUser.name}</strong></span>
+            <button onClick={() => setTab('profile')} className="flex items-center gap-2 hover:opacity-80 transition" title="View profile">
+              <Avatar member={currentUser} size="sm" />
+              <span className="text-sm text-gray-400">Hi, <strong className="text-gray-200">{currentUser.name}</strong></span>
+            </button>
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
@@ -309,6 +322,14 @@ export default function Home() {
           >
             Diary / Schedule
           </button>
+          <button
+            onClick={() => setTab('profile')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              tab === 'profile' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+            }`}
+          >
+            Profile
+          </button>
         </div>
       </div>
 
@@ -361,6 +382,19 @@ export default function Home() {
 
         {tab === 'diary' && (
           <CalendarView ideas={ideas} />
+        )}
+
+        {tab === 'profile' && (
+          <ProfilePage
+            currentUser={currentUser}
+            members={members}
+            ideas={ideas}
+            onUpdate={(updated) => {
+              setCurrentUser(updated);
+              localStorage.setItem('ai-thursdays-user', JSON.stringify(updated));
+              loadMembers();
+            }}
+          />
         )}
       </div>
 
@@ -560,9 +594,7 @@ function CommentThread({ comment, allComments, ideaId, currentUser, depth, onUpd
     <div className={depth > 0 ? 'ml-4 pl-4 border-l-2 border-gray-800' : ''}>
       <div className="py-2">
         <div className="flex items-center gap-2 mb-1">
-          <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-semibold shrink-0">
-            {comment.member_name?.charAt(0).toUpperCase()}
-          </div>
+          <Avatar member={{ name: comment.member_name || '' }} size="sm" />
           <span className="font-medium text-sm text-gray-200">{comment.member_name}</span>
           <span className="text-xs text-gray-600">{timeAgo}</span>
           {(comment as Comment & { edited_at?: string }).edited_at && (
@@ -835,6 +867,124 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+const AVAILABLE_AVATARS = ['dan.svg', 'lion.svg', 'migs.svg', 'ben.svg', 'sasch.svg'];
+
+function ProfilePage({ currentUser, members, ideas, onUpdate }: {
+  currentUser: Member; members: Member[]; ideas: Idea[];
+  onUpdate: (member: Member) => void;
+}) {
+  const [email, setEmail] = useState(currentUser.email || '');
+  const [selectedAvatar, setSelectedAvatar] = useState(currentUser.avatar || '');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const myIdeas = ideas.filter(i => i.submitted_by === currentUser.id);
+  const assignedIdeas = ideas.filter(i => (i.assigned_to ?? []).includes(currentUser.id));
+
+  const handleSave = async () => {
+    setSaving(true);
+    const updated = await api<Member>(`/members/${currentUser.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ email, avatar: selectedAvatar }),
+    });
+    onUpdate({ ...currentUser, email, avatar: selectedAvatar, ...updated });
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div className="max-w-lg mx-auto">
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-5">
+        <div className="flex items-center gap-4 mb-6">
+          <Avatar member={{ ...currentUser, avatar: selectedAvatar }} size="lg" />
+          <div>
+            <h2 className="text-xl font-semibold text-white">{currentUser.name}</h2>
+            <p className="text-sm text-gray-500">Member since {new Date(currentUser.created_at ?? '').toLocaleDateString()}</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm text-gray-400 block mb-1">Email (for notifications)</label>
+            <input
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              type="email"
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-400 block mb-2">Avatar</label>
+            <div className="flex gap-3 flex-wrap">
+              {AVAILABLE_AVATARS.map(av => (
+                <button
+                  key={av}
+                  onClick={() => setSelectedAvatar(av)}
+                  className={`w-14 h-14 rounded-xl border-2 p-1 transition ${
+                    selectedAvatar === av
+                      ? 'border-emerald-500 bg-emerald-500/10'
+                      : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                  }`}
+                >
+                  <img src={`${BASE}/avatars/${av}`} alt={av} className="w-full h-full rounded-lg" />
+                </button>
+              ))}
+              <button
+                onClick={() => setSelectedAvatar('')}
+                className={`w-14 h-14 rounded-xl border-2 p-1 transition flex items-center justify-center ${
+                  !selectedAvatar
+                    ? 'border-emerald-500 bg-emerald-500/10'
+                    : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                }`}
+              >
+                <span className="text-gray-400 text-xs">None</span>
+              </button>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 text-sm font-medium transition disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : saved ? 'Saved!' : 'Save Profile'}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 mb-5">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 text-center">
+          <p className="text-2xl font-bold text-emerald-400">{myIdeas.length}</p>
+          <p className="text-sm text-gray-500">Ideas submitted</p>
+        </div>
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 text-center">
+          <p className="text-2xl font-bold text-emerald-400">{assignedIdeas.length}</p>
+          <p className="text-sm text-gray-500">Assigned to you</p>
+        </div>
+      </div>
+
+      {assignedIdeas.length > 0 && (
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Your Assignments</h3>
+          <div className="space-y-2">
+            {assignedIdeas.map(idea => (
+              <div key={idea.id} className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0">
+                <span className="text-sm text-white">{idea.title}</span>
+                <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
+                  {STATUS_LABELS[idea.status]}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -137,6 +137,29 @@ if (!empty($body['website'])) {
 
 $data = loadData();
 
+// One-time migration: set emails and avatars for existing members
+if (empty($data['_migrated_emails'])) {
+    $emailMap = [
+        'dan' => ['email' => 'daneel@pros.co.za', 'avatar' => 'dan.svg'],
+        'lion' => ['email' => 'Lionel.moyal@gmail.com', 'avatar' => 'lion.svg'],
+        'migs' => ['email' => 'migalvanas@gmail.com', 'avatar' => 'migs.svg'],
+        'ben' => ['email' => 'vorsterben@gmail.com', 'avatar' => 'ben.svg'],
+        'sasch' => ['email' => 'saschaeh@gmail.com', 'avatar' => 'sasch.svg'],
+    ];
+    foreach ($data['members'] as &$member) {
+        $key = strtolower(substr($member['name'], 0, 4));
+        // Try matching first 4 chars, then 3
+        if (!isset($emailMap[$key])) $key = strtolower(substr($member['name'], 0, 3));
+        if (isset($emailMap[$key])) {
+            if (empty($member['email'])) $member['email'] = $emailMap[$key]['email'];
+            if (empty($member['avatar'])) $member['avatar'] = $emailMap[$key]['avatar'];
+        }
+    }
+    unset($member);
+    $data['_migrated_emails'] = true;
+    saveData($data);
+}
+
 // Route: /members
 if ($route === '/members') {
     if ($method === 'GET') {
@@ -152,7 +175,7 @@ if ($route === '/members') {
             if (strcasecmp($m['name'], $name) === 0) jsonResponse($m);
         }
 
-        $member = ['id' => nextId($data), 'name' => $name, 'email' => trim($body['email'] ?? ''), 'created_at' => date('Y-m-d H:i:s')];
+        $member = ['id' => nextId($data), 'name' => $name, 'email' => trim($body['email'] ?? ''), 'avatar' => '', 'created_at' => date('Y-m-d H:i:s')];
         $data['members'][] = $member;
         saveData($data);
         jsonResponse($member);
@@ -420,20 +443,35 @@ if (preg_match('#^/notifications/(\d+)$#', $route, $m)) {
     }
 }
 
-// Route: /members/:id (update email)
+// Route: /members/:id (update profile)
 if (preg_match('#^/members/(\d+)$#', $route, $m)) {
     $mId = (int)$m[1];
+    if ($method === 'GET') {
+        foreach ($data['members'] as $member) {
+            if ($member['id'] === $mId) {
+                jsonResponse($member);
+            }
+        }
+        jsonResponse(['error' => 'Not found'], 404);
+    }
     if ($method === 'PATCH') {
         foreach ($data['members'] as &$member) {
             if ($member['id'] === $mId) {
                 if (array_key_exists('email', $body)) {
                     $member['email'] = trim($body['email']);
                 }
+                if (array_key_exists('avatar', $body)) {
+                    $member['avatar'] = trim($body['avatar']);
+                }
                 break;
             }
         }
         unset($member);
         saveData($data);
+        // Return updated member
+        foreach ($data['members'] as $member) {
+            if ($member['id'] === $mId) jsonResponse($member);
+        }
         jsonResponse(['ok' => true]);
     }
 }
