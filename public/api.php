@@ -531,5 +531,25 @@ if (preg_match('#^/members/(\d+)$#', $route, $m)) {
     }
 }
 
+// Temp debug
+if ($route === '/test-email') {
+    $mid = (int)($_GET['member_id'] ?? 0);
+    if (!$mid) jsonResponse(['error' => 'need member_id'], 400);
+    $log = [];
+    $config = loadSmtpConfig();
+    $log[] = 'config: ' . ($config ? json_encode($config) : 'NULL');
+    $email = null;
+    foreach ($data['members'] as $m) {
+        if ($m['id'] === $mid) { $email = $m['email'] ?? ''; $log[] = "member: {$m['name']} email: $email"; break; }
+    }
+    if ($email && $config && !empty($config['enabled'])) {
+        sendNotificationEmail($data, $mid, 'Test from debug route');
+        $log[] = 'sendNotificationEmail called';
+    } else {
+        $log[] = 'SKIPPED: email=' . ($email ?: 'empty') . ' config_enabled=' . ($config['enabled'] ?? 'unset');
+    }
+    jsonResponse(['log' => $log]);
+}
+
 http_response_code(404);
 echo json_encode(['error' => 'Not found']);
