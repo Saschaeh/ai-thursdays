@@ -123,9 +123,12 @@ function sendNotificationEmail($data, $memberId, $message, $actorEmail = null, $
     $port = $config['port'] ?? 587;
     $user = $config['username'];
     $pass = $config['password'];
-    // Use actor's email as sender, fall back to config
-    $from = $actorEmail ?: $config['from_email'];
-    $fromName = $actorName ? "$actorName via Idle Tuesday" : ($config['from_name'] ?? 'AI Thursdays');
+    // Use config from_email as envelope sender (must be Brevo-verified)
+    // but set the actor's name in the display name so recipient sees who it's from
+    $from = $config['from_email'];
+    $fromName = $actorName ? "$actorName via Idle Tuesday" : ($config['from_name'] ?? 'Idle Tuesday on Thursdays');
+    // Add Reply-To so replying goes to the actor
+    $replyTo = $actorEmail ?: $from;
     $subject = 'Idle Tuesday on Thursdays';
 
     try {
@@ -164,6 +167,7 @@ function sendNotificationEmail($data, $memberId, $message, $actorEmail = null, $
         $send("DATA");
 
         $body = "From: $fromName <$from>\r\n";
+        $body .= "Reply-To: $replyTo\r\n";
         $body .= "To: $email\r\n";
         $body .= "Subject: $subject\r\n";
         $body .= "MIME-Version: 1.0\r\n";
