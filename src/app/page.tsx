@@ -10,7 +10,7 @@ type Idea = {
   id: number; title: string; description: string; category: string;
   status: string; submitted_by: number; submitted_by_name: string;
   assigned_to: number[]; assigned_to_name: string | null; assigned_to_names: string[];
-  target_date: string | null; vote_count: number; comment_count: number;
+  links?: string[]; target_date: string | null; vote_count: number; comment_count: number;
   created_at: string; updated_at: string;
   comments?: Comment[]; votes?: Vote[];
 };
@@ -187,7 +187,7 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center bg-gray-950 bg-cover bg-center bg-fixed" style={{ backgroundImage: "linear-gradient(rgba(3,7,18,0.85), rgba(3,7,18,0.85)), url('/Thursdays/bg-moon.jpg')", backgroundPosition: "center 20%" }}>
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <img src={`${BASE}/icon.svg?v=3`} alt="AT" className="w-12 h-12 rounded-xl mb-4 inline-block" />
+            <img src={`${BASE}/icon.svg?v=4`} alt="AT" className="w-12 h-12 rounded-xl mb-4 inline-block" />
             <h1 className="text-2xl font-semibold text-white tracking-tight">AI Thursdays</h1>
             <p className="text-gray-400 mt-1 text-sm">Select your name to continue</p>
           </div>
@@ -261,7 +261,7 @@ export default function Home() {
       <header className="bg-gray-900 border-b border-gray-800">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={`${BASE}/icon.svg?v=3`} alt="AT" className="w-8 h-8 rounded-lg" />
+            <img src={`${BASE}/icon.svg?v=4`} alt="AT" className="w-8 h-8 rounded-lg" />
             <h1 className="text-lg font-semibold text-white tracking-tight">AI Thursdays</h1>
           </div>
           <div className="flex items-center gap-4">
@@ -482,12 +482,18 @@ function NewIdeaForm({ currentUser, onSubmit, onCancel }: {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('General');
   const [hp, setHp] = useState('');
+  const [showLinks, setShowLinks] = useState(false);
+  const [links, setLinks] = useState<string[]>([]);
+
+  const addLink = () => { if (links.length < 3) setLinks([...links, '']); };
+  const updateLink = (i: number, val: string) => { const l = [...links]; l[i] = val; setLinks(l); };
+  const removeLink = (i: number) => setLinks(links.filter((_, idx) => idx !== i));
 
   const handleSubmit = async () => {
     if (!title.trim() || hp) return;
     await api('/ideas', {
       method: 'POST',
-      body: JSON.stringify({ title, description, category, submitted_by: currentUser.id, website: hp }),
+      body: JSON.stringify({ title, description, category, submitted_by: currentUser.id, links: links.filter(l => l.trim()), website: hp }),
     });
     onSubmit();
   };
@@ -508,6 +514,34 @@ function NewIdeaForm({ currentUser, onSubmit, onCancel }: {
         rows={3}
         className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition resize-none"
       />
+      {!showLinks ? (
+        <button
+          onClick={() => { setShowLinks(true); if (links.length === 0) addLink(); }}
+          className="text-sm text-gray-500 hover:text-emerald-400 transition mb-3"
+        >
+          + Add resources or documents
+        </button>
+      ) : (
+        <div className="mb-3 space-y-2">
+          <p className="text-xs text-gray-500">Resource links (up to 3)</p>
+          {links.map((link, i) => (
+            <div key={i} className="flex gap-2">
+              <input
+                value={link}
+                onChange={e => updateLink(i, e.target.value)}
+                placeholder="https://..."
+                className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+              />
+              <button onClick={() => removeLink(i)} className="text-gray-600 hover:text-red-400 transition px-2">&times;</button>
+            </div>
+          ))}
+          {links.length < 3 && (
+            <button onClick={addLink} className="text-xs text-emerald-400 hover:text-emerald-300 transition">
+              + Add another link
+            </button>
+          )}
+        </div>
+      )}
       <input
         value={hp}
         onChange={e => setHp(e.target.value)}
@@ -803,6 +837,7 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
   const [status, setStatus] = useState(idea.status);
   const [assignedTo, setAssignedTo] = useState<number[]>(idea.assigned_to ?? []);
   const [targetDate, setTargetDate] = useState(idea.target_date ?? '');
+  const [editLinks, setEditLinks] = useState<string[]>(idea.links ?? []);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleSave = async () => {
@@ -812,6 +847,7 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
         status,
         assigned_to: assignedTo,
         target_date: targetDate || null,
+        links: editLinks.filter(l => l.trim()),
       }),
     });
     setEditing(false);
@@ -842,7 +878,24 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
           </div>
 
           {idea.description && (
-            <p className="text-gray-300 mb-5 whitespace-pre-wrap leading-relaxed">{idea.description}</p>
+            <p className="text-gray-300 mb-3 whitespace-pre-wrap leading-relaxed">{idea.description}</p>
+          )}
+
+          {(idea.links ?? []).length > 0 && (
+            <div className="mb-5 space-y-1.5">
+              {(idea.links ?? []).map((link, i) => (
+                <a
+                  key={i}
+                  href={link.startsWith('http') ? link : `https://${link}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 transition truncate"
+                >
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                  {link}
+                </a>
+              ))}
+            </div>
           )}
 
           <div className="border border-gray-800 rounded-xl p-4 mb-5 bg-gray-800/50">
@@ -866,6 +919,25 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
                 <div>
                   <p className="text-xs text-gray-500 mb-2">Assign to (click to toggle):</p>
                   <MultiSelect members={members} selected={assignedTo} onChange={setAssignedTo} />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">Resource links (up to 3)</p>
+                  {editLinks.map((link, i) => (
+                    <div key={i} className="flex gap-2 mb-2">
+                      <input
+                        value={link}
+                        onChange={e => { const l = [...editLinks]; l[i] = e.target.value; setEditLinks(l); }}
+                        placeholder="https://..."
+                        className="flex-1 px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+                      />
+                      <button onClick={() => setEditLinks(editLinks.filter((_, idx) => idx !== i))} className="text-gray-600 hover:text-red-400 transition px-2">&times;</button>
+                    </div>
+                  ))}
+                  {editLinks.length < 3 && (
+                    <button onClick={() => setEditLinks([...editLinks, ''])} className="text-xs text-emerald-400 hover:text-emerald-300 transition">
+                      + Add link
+                    </button>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <button onClick={handleSave} className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-400 transition">Save</button>

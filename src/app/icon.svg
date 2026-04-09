@@ -1,85 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#064E3B"/>
+      <stop offset="0%" stop-color="#059669"/>
       <stop offset="100%" stop-color="#10B981"/>
     </linearGradient>
   </defs>
-  <!-- Background -->
-  <rect width="64" height="64" rx="10" fill="url(#bg)"/>
-
-  <!-- ===== Letter "A" ===== -->
-  <!-- Top peak -->
-  <rect x="10" y="10" width="4" height="4" fill="#fff"/>
-  <rect x="14" y="10" width="4" height="4" fill="#fff"/>
-  <!-- Row 2: widening -->
-  <rect x="6" y="14" width="4" height="4" fill="#fff"/>
-  <rect x="18" y="14" width="4" height="4" fill="#fff"/>
-  <!-- Row 3 -->
-  <rect x="6" y="18" width="4" height="4" fill="#fff"/>
-  <rect x="18" y="18" width="4" height="4" fill="#fff"/>
-  <!-- Row 4: crossbar - highlighted -->
-  <rect x="6" y="22" width="4" height="4" fill="#fff"/>
-  <rect x="10" y="22" width="4" height="4" fill="#6EE7B7"/>
-  <rect x="14" y="22" width="4" height="4" fill="#6EE7B7"/>
-  <rect x="18" y="22" width="4" height="4" fill="#fff"/>
-  <!-- Row 5 -->
-  <rect x="6" y="26" width="4" height="4" fill="#fff"/>
-  <rect x="18" y="26" width="4" height="4" fill="#fff"/>
-  <!-- Row 6: wide base -->
-  <rect x="2" y="30" width="4" height="4" fill="#fff"/>
-  <rect x="6" y="30" width="4" height="4" fill="#fff"/>
-  <rect x="18" y="30" width="4" height="4" fill="#fff"/>
-  <rect x="22" y="30" width="4" height="4" fill="#fff"/>
-
-  <!-- Shadow under A -->
-  <rect x="2" y="34" width="4" height="2" fill="#064E3B" opacity="0.4"/>
-  <rect x="6" y="34" width="4" height="2" fill="#064E3B" opacity="0.4"/>
-  <rect x="18" y="34" width="4" height="2" fill="#064E3B" opacity="0.4"/>
-  <rect x="22" y="34" width="4" height="2" fill="#064E3B" opacity="0.4"/>
-
-  <!-- ===== Letter "T" ===== -->
-  <!-- Top bar - full width -->
-  <rect x="30" y="10" width="4" height="4" fill="#fff"/>
-  <rect x="34" y="10" width="4" height="4" fill="#fff"/>
-  <rect x="38" y="10" width="4" height="4" fill="#fff"/>
-  <rect x="42" y="10" width="4" height="4" fill="#fff"/>
-  <rect x="46" y="10" width="4" height="4" fill="#fff"/>
-  <rect x="50" y="10" width="4" height="4" fill="#fff"/>
-  <rect x="54" y="10" width="4" height="4" fill="#fff"/>
-  <!-- Stem - thick (2 blocks wide) -->
-  <rect x="42" y="14" width="4" height="4" fill="#fff"/>
-  <rect x="38" y="14" width="4" height="4" fill="#fff"/>
-  <rect x="38" y="18" width="4" height="4" fill="#fff"/>
-  <rect x="42" y="18" width="4" height="4" fill="#fff"/>
-  <!-- Highlighted middle -->
-  <rect x="38" y="22" width="4" height="4" fill="#6EE7B7"/>
-  <rect x="42" y="22" width="4" height="4" fill="#6EE7B7"/>
-  <rect x="38" y="26" width="4" height="4" fill="#fff"/>
-  <rect x="42" y="26" width="4" height="4" fill="#fff"/>
-  <rect x="38" y="30" width="4" height="4" fill="#fff"/>
-  <rect x="42" y="30" width="4" height="4" fill="#fff"/>
-
-  <!-- Shadow under T -->
-  <rect x="38" y="34" width="4" height="2" fill="#064E3B" opacity="0.4"/>
-  <rect x="42" y="34" width="4" height="2" fill="#064E3B" opacity="0.4"/>
-
-  <!-- ===== Decorative pixel dots ===== -->
-  <rect x="4" y="42" width="3" height="3" fill="#34D399" opacity="0.3"/>
-  <rect x="14" y="44" width="3" height="3" fill="#34D399" opacity="0.2"/>
-  <rect x="28" y="42" width="3" height="3" fill="#34D399" opacity="0.3"/>
-  <rect x="44" y="44" width="3" height="3" fill="#34D399" opacity="0.2"/>
-  <rect x="56" y="42" width="3" height="3" fill="#34D399" opacity="0.3"/>
-
-  <!-- Bottom pixel row -->
-  <rect x="4" y="54" width="3" height="3" fill="#6EE7B7" opacity="0.2"/>
-  <rect x="12" y="56" width="2" height="2" fill="#6EE7B7" opacity="0.15"/>
-  <rect x="24" y="54" width="3" height="3" fill="#6EE7B7" opacity="0.2"/>
-  <rect x="36" y="56" width="2" height="2" fill="#6EE7B7" opacity="0.15"/>
-  <rect x="48" y="54" width="3" height="3" fill="#6EE7B7" opacity="0.2"/>
-  <rect x="56" y="56" width="2" height="2" fill="#6EE7B7" opacity="0.15"/>
-
-  <!-- Corner sparkles -->
-  <rect x="2" y="2" width="2" height="2" fill="#fff" opacity="0.25"/>
-  <rect x="58" y="2" width="2" height="2" fill="#fff" opacity="0.15"/>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <text x="32" y="43" text-anchor="middle" font-family="'Courier New', monospace" font-weight="900" font-size="34" fill="#fff" letter-spacing="-1">AT</text>
 </svg>

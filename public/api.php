@@ -289,6 +289,10 @@ if ($route === '/ideas') {
         $title = trim($body['title'] ?? '');
         if (!$title) jsonResponse(['error' => 'Title is required'], 400);
 
+        $links = $body['links'] ?? [];
+        if (!is_array($links)) $links = [];
+        $links = array_slice(array_filter(array_map('trim', $links)), 0, 3);
+
         $idea = [
             'id' => nextId($data),
             'title' => $title,
@@ -297,6 +301,7 @@ if ($route === '/ideas') {
             'status' => 'new',
             'submitted_by' => $body['submitted_by'] ?? null,
             'assigned_to' => [],
+            'links' => array_values($links),
             'target_date' => null,
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
@@ -343,6 +348,11 @@ if (preg_match('#^/ideas/(\d+)$#', $route, $m)) {
         $oldAssignees = $data['ideas'][$ideaIdx]['assigned_to'] ?? [];
         if (!is_array($oldAssignees)) $oldAssignees = $oldAssignees ? [$oldAssignees] : [];
 
+        if (array_key_exists('links', $body)) {
+            $links = $body['links'];
+            if (!is_array($links)) $links = [];
+            $data['ideas'][$ideaIdx]['links'] = array_values(array_slice(array_filter(array_map('trim', $links)), 0, 3));
+        }
         foreach (['title', 'description', 'category', 'status', 'target_date'] as $key) {
             if (array_key_exists($key, $body)) {
                 $data['ideas'][$ideaIdx][$key] = $body[$key];
