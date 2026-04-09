@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     siteName: "AI Thursdays",
     images: [
       {
-        url: "https://idletuesday.ai/Thursdays/og-image.svg",
+        url: "https://idletuesday.ai/Thursdays/og-image.png",
         width: 1200,
         height: 630,
         alt: "AI Thursdays",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "AI Thursdays — Idle Tuesday on Thursdays",
     description: "Track ideas. Assign topics. Collaborate with your AI study group.",
-    images: ["https://idletuesday.ai/Thursdays/og-image.svg"],
+    images: ["https://idletuesday.ai/Thursdays/og-image.png"],
   },
   icons: {
     icon: "/Thursdays/icon.svg",
