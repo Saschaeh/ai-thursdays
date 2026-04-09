@@ -497,6 +497,9 @@ if (preg_match('#^/members/(\d+)$#', $route, $m)) {
     if ($method === 'PATCH') {
         foreach ($data['members'] as &$member) {
             if ($member['id'] === $mId) {
+                if (array_key_exists('name', $body) && trim($body['name'])) {
+                    $member['name'] = trim($body['name']);
+                }
                 if (array_key_exists('email', $body)) {
                     $member['email'] = trim($body['email']);
                 }

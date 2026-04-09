@@ -877,6 +877,7 @@ function ProfilePage({ currentUser, members, ideas, onUpdate }: {
   currentUser: Member; members: Member[]; ideas: Idea[];
   onUpdate: (member: Member) => void;
 }) {
+  const [name, setName] = useState(currentUser.name);
   const [email, setEmail] = useState(currentUser.email || '');
   const [selectedAvatar, setSelectedAvatar] = useState(currentUser.avatar || '');
   const [saving, setSaving] = useState(false);
@@ -886,12 +887,13 @@ function ProfilePage({ currentUser, members, ideas, onUpdate }: {
   const assignedIdeas = ideas.filter(i => (i.assigned_to ?? []).includes(currentUser.id));
 
   const handleSave = async () => {
+    if (!name.trim()) return;
     setSaving(true);
     const updated = await api<Member>(`/members/${currentUser.id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ email, avatar: selectedAvatar }),
+      body: JSON.stringify({ name: name.trim(), email, avatar: selectedAvatar }),
     });
-    onUpdate({ ...currentUser, email, avatar: selectedAvatar, ...updated });
+    onUpdate({ ...currentUser, ...updated, name: name.trim(), email, avatar: selectedAvatar });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -909,6 +911,15 @@ function ProfilePage({ currentUser, members, ideas, onUpdate }: {
         </div>
 
         <div className="space-y-4">
+          <div>
+            <label className="text-sm text-gray-400 block mb-1">Name</label>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Your name"
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+            />
+          </div>
           <div>
             <label className="text-sm text-gray-400 block mb-1">Email (for notifications)</label>
             <input
