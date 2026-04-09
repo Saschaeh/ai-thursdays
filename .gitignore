@@ -3,6 +3,9 @@
 # database
 /data
 
+# smtp credentials
+smtp-config.php
+
 # dependencies
 /node_modules
 /.pnp

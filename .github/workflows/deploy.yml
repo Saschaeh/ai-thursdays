@@ -30,6 +30,7 @@ jobs:
           SSH_HOST: 79.72.48.249
           SSH_PORT: 22874
           SSH_USER: idletuesday
+          SMTP_CONFIG: ${{ secrets.SMTP_CONFIG }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_KEY" > ~/.ssh/deploy_key
@@ -42,6 +43,18 @@ jobs:
 
           rsync -avz --delete \
             --exclude='/data' \
+            --exclude='smtp-config.php' \
+            --exclude='vendor' \
             -e "ssh -i ~/.ssh/deploy_key -p $SSH_PORT" \
             ./out/ \
             $SSH_USER@$SSH_HOST:~/public/Thursdays/
+
+          # Write SMTP config from secret
+          if [ -n "$SMTP_CONFIG" ]; then
+            echo "$SMTP_CONFIG" | ssh -i ~/.ssh/deploy_key -p $SSH_PORT $SSH_USER@$SSH_HOST \
+              "cat > ~/public/Thursdays/smtp-config.php"
+          fi
+
+          # Install PHPMailer if not present
+          ssh -i ~/.ssh/deploy_key -p $SSH_PORT $SSH_USER@$SSH_HOST \
+            "cd ~/public/Thursdays && (test -d vendor/phpmailer || (composer require phpmailer/phpmailer --no-interaction 2>/dev/null || true))"

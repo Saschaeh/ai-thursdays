@@ -117,7 +117,7 @@ function sendNotificationEmail($data, $memberId, $message) {
             $mail->setFrom($config['from_email'], $config['from_name'] ?? 'AI Thursdays');
             $mail->addAddress($email);
             $mail->isHTML(false);
-            $mail->Subject = 'AI Thursdays Notification';
+            $mail->Subject = 'Idle Tuesday on Thursdays';
             $mail->Body = $message;
             $mail->send();
         } catch (\Exception $e) {
