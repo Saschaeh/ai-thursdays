@@ -96,6 +96,23 @@ export default function Home() {
   useEffect(() => {
     loadMembers();
     loadIdeas();
+    // Restore user from localStorage
+    try {
+      const saved = localStorage.getItem('ai-thursdays-user');
+      if (saved) {
+        const user = JSON.parse(saved) as Member;
+        // Fetch fresh data from API
+        api<Member>(`/members/${user.id}`).then(fresh => {
+          const m = { ...user, ...fresh };
+          setCurrentUser(m);
+          localStorage.setItem('ai-thursdays-user', JSON.stringify(m));
+          if (!m.avatar) setTab('profile');
+        }).catch(() => {
+          setCurrentUser(user);
+          if (!user.avatar) setTab('profile');
+        });
+      }
+    } catch {}
   }, [loadIdeas, loadMembers]);
 
   useEffect(() => {
@@ -106,8 +123,17 @@ export default function Home() {
   }, [currentUser, loadNotifications]);
 
   const selectUser = (member: Member) => {
-    setCurrentUser(member);
-    localStorage.setItem('ai-thursdays-user', JSON.stringify(member));
+    // Fetch latest member data from API to get current avatar
+    api<Member>(`/members/${member.id}`).then(fresh => {
+      const m = { ...member, ...fresh };
+      setCurrentUser(m);
+      localStorage.setItem('ai-thursdays-user', JSON.stringify(m));
+      if (!m.avatar) setTab('profile');
+    }).catch(() => {
+      setCurrentUser(member);
+      localStorage.setItem('ai-thursdays-user', JSON.stringify(member));
+      if (!member.avatar) setTab('profile');
+    });
   };
 
   const handleNewMember = async () => {

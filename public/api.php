@@ -239,6 +239,16 @@ if (empty($data['_migrated_v3'])) {
     saveData($data);
 }
 
+// Migration v4: reset all avatars so users pick their own
+if (empty($data['_migrated_v4'])) {
+    foreach ($data['members'] as &$member) {
+        $member['avatar'] = '';
+    }
+    unset($member);
+    $data['_migrated_v4'] = true;
+    saveData($data);
+}
+
 // Route: /members
 if ($route === '/members') {
     if ($method === 'GET') {
