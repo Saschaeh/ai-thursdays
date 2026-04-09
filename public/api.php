@@ -174,8 +174,8 @@ if (!empty($body['website'])) {
 
 $data = loadData();
 
-// One-time migration: set emails and avatars for existing members
-if (empty($data['_migrated_emails'])) {
+// Migration: set emails, avatars, and rename Sascha -> Sasch
+if (empty($data['_migrated_v2'])) {
     $emailMap = [
         'dan' => ['email' => 'daneel@pros.co.za', 'avatar' => 'dan.svg'],
         'lion' => ['email' => 'Lionel.moyal@gmail.com', 'avatar' => 'lion.svg'],
@@ -184,16 +184,19 @@ if (empty($data['_migrated_emails'])) {
         'sasch' => ['email' => 'saschaeh@gmail.com', 'avatar' => 'sasch.svg'],
     ];
     foreach ($data['members'] as &$member) {
+        // Rename Sascha -> Sasch
+        if (strtolower($member['name']) === 'sascha') {
+            $member['name'] = 'Sasch';
+        }
         $key = strtolower(substr($member['name'], 0, 4));
-        // Try matching first 4 chars, then 3
         if (!isset($emailMap[$key])) $key = strtolower(substr($member['name'], 0, 3));
         if (isset($emailMap[$key])) {
-            if (empty($member['email'])) $member['email'] = $emailMap[$key]['email'];
-            if (empty($member['avatar'])) $member['avatar'] = $emailMap[$key]['avatar'];
+            $member['email'] = $emailMap[$key]['email'];
+            $member['avatar'] = $emailMap[$key]['avatar'];
         }
     }
     unset($member);
-    $data['_migrated_emails'] = true;
+    $data['_migrated_v2'] = true;
     saveData($data);
 }
 
