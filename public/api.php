@@ -548,5 +548,47 @@ if (preg_match('#^/members/(\d+)$#', $route, $m)) {
     }
 }
 
+// Debug
+if ($route === '/test-email') {
+    $mid = (int)($_GET['member_id'] ?? 0);
+    if (!$mid) jsonResponse(['error' => 'need member_id'], 400);
+    $config = loadSmtpConfig();
+    $log = ['config_from' => $config['from_email'] ?? 'NONE', 'config_enabled' => $config['enabled'] ?? false, 'password_start' => substr($config['password'] ?? '', 0, 20)];
+    // Find member
+    foreach ($data['members'] as $m) {
+        if ($m['id'] === $mid) { $log['member'] = $m['name']; $log['to'] = $m['email'] ?? 'NONE'; break; }
+    }
+    // Try send inline
+    $host = $config['host']; $port = $config['port'];
+    $sock = @fsockopen($host, $port, $errno, $errstr, 10);
+    if (!$sock) { $log['error'] = "connect: $errno $errstr"; jsonResponse($log); }
+    $read = function() use ($sock) { return trim(fgets($sock, 512)); };
+    $send = function($cmd) use ($sock, $read) { fwrite($sock, $cmd . "\r\n"); return $read(); };
+    $log['greeting'] = $read();
+    $send("EHLO localhost");
+    stream_set_timeout($sock, 2);
+    while ($line = fgets($sock, 512)) { if (substr(trim($line), 3, 1) === ' ') break; }
+    $log['starttls'] = $send("STARTTLS");
+    stream_set_blocking($sock, true);
+    $tls = @stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+    $log['tls'] = $tls ? 'OK' : 'FAIL';
+    if (!$tls) { fclose($sock); jsonResponse($log); }
+    $send("EHLO localhost");
+    while ($line = fgets($sock, 512)) { if (substr(trim($line), 3, 1) === ' ') break; }
+    $send("AUTH LOGIN");
+    $send(base64_encode($config['username']));
+    $log['auth'] = $send(base64_encode($config['password']));
+    if (substr($log['auth'], 0, 3) !== '235') { fclose($sock); jsonResponse($log); }
+    $from = $config['from_email'];
+    $log['mail_from'] = $send("MAIL FROM:<$from>");
+    $to = $log['to'];
+    $log['rcpt_to'] = $send("RCPT TO:<$to>");
+    $log['data'] = $send("DATA");
+    $body = "From: Idle Tuesday <$from>\r\nTo: $to\r\nSubject: Test " . date('H:i:s') . "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\nTest at " . date('Y-m-d H:i:s');
+    $log['result'] = $send($body . "\r\n.");
+    $send("QUIT"); fclose($sock);
+    jsonResponse($log);
+}
+
 http_response_code(404);
 echo json_encode(['error' => 'Not found']);
