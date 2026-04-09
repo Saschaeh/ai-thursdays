@@ -85,11 +85,16 @@ function createNotification(&$data, $memberId, $type, $message, $ideaId = null) 
     return $notif;
 }
 
+function smtpLog($msg) {
+    $logFile = __DIR__ . '/data/smtp-debug.log';
+    file_put_contents($logFile, date('Y-m-d H:i:s') . ' ' . $msg . "\n", FILE_APPEND | LOCK_EX);
+}
+
 function sendNotificationEmail($data, $memberId, $message) {
     $configFile = __DIR__ . '/smtp-config.php';
-    if (!file_exists($configFile)) return;
+    if (!file_exists($configFile)) { smtpLog("NO CONFIG FILE"); return; }
     $config = require $configFile;
-    if (empty($config['enabled'])) return;
+    if (empty($config['enabled'])) { smtpLog("CONFIG DISABLED"); return; }
 
     // Find member email
     $email = null;
@@ -99,7 +104,7 @@ function sendNotificationEmail($data, $memberId, $message) {
             break;
         }
     }
-    if (!$email) return;
+    if (!$email) { smtpLog("NO EMAIL for member $memberId"); return; }
 
     $host = $config['host'];
     $port = $config['port'] ?? 587;
@@ -109,57 +114,69 @@ function sendNotificationEmail($data, $memberId, $message) {
     $fromName = $config['from_name'] ?? 'AI Thursdays';
     $subject = 'Idle Tuesday on Thursdays';
 
+    smtpLog("SENDING to $email via $host:$port from $from");
+
     try {
         $sock = @fsockopen($host, $port, $errno, $errstr, 10);
-        if (!$sock) return;
+        if (!$sock) { smtpLog("CONNECT FAILED: $errno $errstr"); return; }
 
-        $read = function() use ($sock) { return fgets($sock, 512); };
+        $read = function() use ($sock) { return trim(fgets($sock, 512)); };
         $send = function($cmd) use ($sock, $read) {
             fwrite($sock, $cmd . "\r\n");
-            return $read();
+            $resp = $read();
+            return $resp;
         };
 
-        $read(); // greeting
+        $greeting = $read();
+        smtpLog("GREETING: $greeting");
+
         $send("EHLO localhost");
-        // Read all EHLO response lines
         stream_set_timeout($sock, 2);
         while ($line = fgets($sock, 512)) {
-            if (substr($line, 3, 1) === ' ') break;
+            if (substr(trim($line), 3, 1) === ' ') break;
         }
 
-        // STARTTLS
-        $send("STARTTLS");
+        $resp = $send("STARTTLS");
+        smtpLog("STARTTLS: $resp");
+
         stream_set_blocking($sock, true);
-        if (!@stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) return;
+        $crypto = @stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+        if (!$crypto) { smtpLog("TLS FAILED"); fclose($sock); return; }
+        smtpLog("TLS OK");
 
         $send("EHLO localhost");
         while ($line = fgets($sock, 512)) {
-            if (substr($line, 3, 1) === ' ') break;
+            if (substr(trim($line), 3, 1) === ' ') break;
         }
 
-        // AUTH LOGIN
         $send("AUTH LOGIN");
         $send(base64_encode($user));
         $resp = $send(base64_encode($pass));
+        smtpLog("AUTH: $resp");
         if (substr($resp, 0, 3) !== '235') { fclose($sock); return; }
 
-        $send("MAIL FROM:<$from>");
-        $send("RCPT TO:<$email>");
-        $send("DATA");
+        $resp = $send("MAIL FROM:<$from>");
+        smtpLog("MAIL FROM: $resp");
+        $resp = $send("RCPT TO:<$email>");
+        smtpLog("RCPT TO: $resp");
+        $resp = $send("DATA");
+        smtpLog("DATA: $resp");
 
-        $headers = "From: $fromName <$from>\r\n";
-        $headers .= "To: $email\r\n";
-        $headers .= "Subject: $subject\r\n";
-        $headers .= "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
-        $headers .= "\r\n";
-        $headers .= str_replace("\n.", "\n..", $message);
+        $body = "From: $fromName <$from>\r\n";
+        $body .= "To: $email\r\n";
+        $body .= "Subject: $subject\r\n";
+        $body .= "MIME-Version: 1.0\r\n";
+        $body .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $body .= "\r\n";
+        $body .= str_replace("\n.", "\n..", $message);
 
-        $send($headers . "\r\n.");
+        $resp = $send($body . "\r\n.");
+        smtpLog("SEND RESULT: $resp");
         $send("QUIT");
         fclose($sock);
+        smtpLog("DONE");
     } catch (\Exception $e) {
-        // Silently fail
+        smtpLog("EXCEPTION: " . $e->getMessage());
     }
 }
 
@@ -517,6 +534,18 @@ if (preg_match('#^/members/(\d+)$#', $route, $m)) {
         }
         jsonResponse(['ok' => true]);
     }
+}
+
+// Route: /test-email (debug - remove after confirming)
+if ($route === '/test-email') {
+    $memberId = (int)($_GET['member_id'] ?? 0);
+    if ($memberId) {
+        sendNotificationEmail($data, $memberId, 'Test email from AI Thursdays! If you see this, notifications are working.');
+        $logFile = __DIR__ . '/data/smtp-debug.log';
+        $log = file_exists($logFile) ? file_get_contents($logFile) : 'No log file';
+        jsonResponse(['sent' => true, 'log' => $log]);
+    }
+    jsonResponse(['error' => 'Provide member_id'], 400);
 }
 
 http_response_code(404);
