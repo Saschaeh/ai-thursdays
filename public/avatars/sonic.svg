@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <!-- Sonic: Blue hedgehog, spiky hair, big eyes -->
+  <!-- Row 0: top spikes -->
+  <rect x="45" y="0" width="5" height="5" fill="#1155CC"/>
+  <rect x="55" y="0" width="5" height="5" fill="#1155CC"/>
+  <rect x="65" y="0" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 1 -->
+  <rect x="40" y="5" width="5" height="5" fill="#1155CC"/>
+  <rect x="45" y="5" width="5" height="5" fill="#2266DD"/>
+  <rect x="50" y="5" width="5" height="5" fill="#1155CC"/>
+  <rect x="55" y="5" width="5" height="5" fill="#2266DD"/>
+  <rect x="60" y="5" width="5" height="5" fill="#1155CC"/>
+  <rect x="65" y="5" width="5" height="5" fill="#2266DD"/>
+  <rect x="70" y="5" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 2: spikes -->
+  <rect x="30" y="10" width="5" height="5" fill="#1155CC"/>
+  <rect x="35" y="10" width="5" height="5" fill="#2266DD"/>
+  <rect x="40" y="10" width="5" height="5" fill="#2266DD"/>
+  <rect x="45" y="10" width="5" height="5" fill="#3377EE"/>
+  <rect x="50" y="10" width="5" height="5" fill="#2266DD"/>
+  <rect x="55" y="10" width="5" height="5" fill="#3377EE"/>
+  <rect x="60" y="10" width="5" height="5" fill="#2266DD"/>
+  <rect x="65" y="10" width="5" height="5" fill="#3377EE"/>
+  <rect x="70" y="10" width="5" height="5" fill="#2266DD"/>
+  <rect x="75" y="10" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 3 -->
+  <rect x="25" y="15" width="5" height="5" fill="#1155CC"/>
+  <rect x="30" y="15" width="5" height="5" fill="#2266DD"/>
+  <rect x="35" y="15" width="5" height="5" fill="#3377EE"/>
+  <rect x="40" y="15" width="5" height="5" fill="#3377EE"/>
+  <rect x="45" y="15" width="5" height="5" fill="#3377EE"/>
+  <rect x="50" y="15" width="5" height="5" fill="#3377EE"/>
+  <rect x="55" y="15" width="5" height="5" fill="#3377EE"/>
+  <rect x="60" y="15" width="5" height="5" fill="#2266DD"/>
+  <rect x="65" y="15" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 4: forehead -->
+  <rect x="20" y="20" width="5" height="5" fill="#1155CC"/>
+  <rect x="25" y="20" width="5" height="5" fill="#2266DD"/>
+  <rect x="30" y="20" width="5" height="5" fill="#3377EE"/>
+  <rect x="35" y="20" width="5" height="5" fill="#3377EE"/>
+  <rect x="40" y="20" width="5" height="5" fill="#3377EE"/>
+  <rect x="45" y="20" width="5" height="5" fill="#3377EE"/>
+  <rect x="50" y="20" width="5" height="5" fill="#2266DD"/>
+  <rect x="55" y="20" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 5: face starts -->
+  <rect x="15" y="25" width="5" height="5" fill="#1155CC"/>
+  <rect x="20" y="25" width="5" height="5" fill="#2266DD"/>
+  <rect x="25" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="30" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="35" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="40" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="45" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="50" y="25" width="5" height="5" fill="#2266DD"/>
+  <rect x="55" y="25" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 6: big eyes -->
+  <rect x="10" y="30" width="5" height="5" fill="#1155CC"/>
+  <rect x="15" y="30" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="20" y="30" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="25" y="30" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="30" y="30" width="5" height="5" fill="#228833"/>
+  <rect x="35" y="30" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="40" y="30" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="45" y="30" width="5" height="5" fill="#228833"/>
+  <rect x="50" y="30" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="55" y="30" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 7: eyes bottom -->
+  <rect x="10" y="35" width="5" height="5" fill="#1155CC"/>
+  <rect x="15" y="35" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="20" y="35" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="25" y="35" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="30" y="35" width="5" height="5" fill="#111111"/>
+  <rect x="35" y="35" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="40" y="35" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="45" y="35" width="5" height="5" fill="#111111"/>
+  <rect x="50" y="35" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="55" y="35" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 8: nose -->
+  <rect x="10" y="40" width="5" height="5" fill="#1155CC"/>
+  <rect x="15" y="40" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="20" y="40" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="25" y="40" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="30" y="40" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="35" y="40" width="5" height="5" fill="#111111"/>
+  <rect x="40" y="40" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="45" y="40" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="50" y="40" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 9: mouth -->
+  <rect x="10" y="45" width="5" height="5" fill="#1155CC"/>
+  <rect x="15" y="45" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="20" y="45" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="25" y="45" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="30" y="45" width="5" height="5" fill="#CC4444"/>
+  <rect x="35" y="45" width="5" height="5" fill="#CC4444"/>
+  <rect x="40" y="45" width="5" height="5" fill="#CC4444"/>
+  <rect x="45" y="45" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="50" y="45" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 10: chin -->
+  <rect x="15" y="50" width="5" height="5" fill="#1155CC"/>
+  <rect x="20" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="25" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="30" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="35" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="40" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="45" y="50" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 11 -->
+  <rect x="15" y="55" width="5" height="5" fill="#1155CC"/>
+  <rect x="20" y="55" width="5" height="5" fill="#2266DD"/>
+  <rect x="25" y="55" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="30" y="55" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="35" y="55" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="40" y="55" width="5" height="5" fill="#2266DD"/>
+  <rect x="45" y="55" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 12: body -->
+  <rect x="20" y="60" width="5" height="5" fill="#1155CC"/>
+  <rect x="25" y="60" width="5" height="5" fill="#2266DD"/>
+  <rect x="30" y="60" width="5" height="5" fill="#3377EE"/>
+  <rect x="35" y="60" width="5" height="5" fill="#3377EE"/>
+  <rect x="40" y="60" width="5" height="5" fill="#2266DD"/>
+  <rect x="45" y="60" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 13: belly -->
+  <rect x="20" y="65" width="5" height="5" fill="#1155CC"/>
+  <rect x="25" y="65" width="5" height="5" fill="#2266DD"/>
+  <rect x="30" y="65" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="35" y="65" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="40" y="65" width="5" height="5" fill="#2266DD"/>
+  <rect x="45" y="65" width="5" height="5" fill="#1155CC"/>
+  <!-- Row 14: shoes -->
+  <rect x="15" y="70" width="5" height="5" fill="#CC0000"/>
+  <rect x="20" y="70" width="5" height="5" fill="#EE2222"/>
+  <rect x="25" y="70" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="30" y="70" width="5" height="5" fill="#EE2222"/>
+  <rect x="35" y="70" width="5" height="5" fill="#CC0000"/>
+  <rect x="40" y="70" width="5" height="5" fill="#EE2222"/>
+  <rect x="45" y="70" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="50" y="70" width="5" height="5" fill="#EE2222"/>
+  <!-- Row 15 -->
+  <rect x="15" y="75" width="5" height="5" fill="#CC0000"/>
+  <rect x="20" y="75" width="5" height="5" fill="#EE2222"/>
+  <rect x="25" y="75" width="5" height="5" fill="#EE2222"/>
+  <rect x="30" y="75" width="5" height="5" fill="#CC0000"/>
+  <rect x="35" y="75" width="5" height="5" fill="#CC0000"/>
+  <rect x="40" y="75" width="5" height="5" fill="#EE2222"/>
+  <rect x="45" y="75" width="5" height="5" fill="#EE2222"/>
+  <rect x="50" y="75" width="5" height="5" fill="#CC0000"/>
+</svg>

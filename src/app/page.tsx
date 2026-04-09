@@ -888,7 +888,13 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
   );
 }
 
-const AVAILABLE_AVATARS = ['dan.svg', 'lion.svg', 'migs.svg', 'ben.svg', 'sasch.svg'];
+const AVAILABLE_AVATARS = [
+  'dan.svg', 'lion.svg', 'migs.svg', 'ben.svg', 'sasch.svg',
+  'ninja.svg', 'alien.svg', 'pirate.svg', 'astronaut.svg', 'viking.svg',
+  'cat.svg', 'skull.svg', 'phoenix.svg', 'ghost.svg', 'crown.svg',
+  'doggie.svg', 'vader.svg', 'link.svg', 'doomguy.svg', 'mario.svg',
+  'sonic.svg', 'masterchief.svg', 'pacman.svg',
+];
 
 function ProfilePage({ currentUser, members, ideas, onUpdate }: {
   currentUser: Member; members: Member[]; ideas: Idea[];

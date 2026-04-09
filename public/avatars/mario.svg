@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+  <!-- Mario: Red cap, mustache, blue overalls -->
+  <!-- Row 0: top of cap -->
+  <rect x="25" y="0" width="5" height="5" fill="#CC0000"/>
+  <rect x="30" y="0" width="5" height="5" fill="#CC0000"/>
+  <rect x="35" y="0" width="5" height="5" fill="#CC0000"/>
+  <rect x="40" y="0" width="5" height="5" fill="#CC0000"/>
+  <rect x="45" y="0" width="5" height="5" fill="#CC0000"/>
+  <!-- Row 1 -->
+  <rect x="20" y="5" width="5" height="5" fill="#AA0000"/>
+  <rect x="25" y="5" width="5" height="5" fill="#DD1111"/>
+  <rect x="30" y="5" width="5" height="5" fill="#EE2222"/>
+  <rect x="35" y="5" width="5" height="5" fill="#EE2222"/>
+  <rect x="40" y="5" width="5" height="5" fill="#EE2222"/>
+  <rect x="45" y="5" width="5" height="5" fill="#DD1111"/>
+  <rect x="50" y="5" width="5" height="5" fill="#CC0000"/>
+  <rect x="55" y="5" width="5" height="5" fill="#AA0000"/>
+  <!-- Row 2 -->
+  <rect x="15" y="10" width="5" height="5" fill="#AA0000"/>
+  <rect x="20" y="10" width="5" height="5" fill="#DD1111"/>
+  <rect x="25" y="10" width="5" height="5" fill="#EE2222"/>
+  <rect x="30" y="10" width="5" height="5" fill="#EE2222"/>
+  <rect x="35" y="10" width="5" height="5" fill="#EE2222"/>
+  <rect x="40" y="10" width="5" height="5" fill="#EE2222"/>
+  <rect x="45" y="10" width="5" height="5" fill="#EE2222"/>
+  <rect x="50" y="10" width="5" height="5" fill="#DD1111"/>
+  <rect x="55" y="10" width="5" height="5" fill="#CC0000"/>
+  <rect x="60" y="10" width="5" height="5" fill="#AA0000"/>
+  <!-- Row 3: cap brim + M logo -->
+  <rect x="10" y="15" width="5" height="5" fill="#AA0000"/>
+  <rect x="15" y="15" width="5" height="5" fill="#DD1111"/>
+  <rect x="20" y="15" width="5" height="5" fill="#EE2222"/>
+  <rect x="25" y="15" width="5" height="5" fill="#EE2222"/>
+  <rect x="30" y="15" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="35" y="15" width="5" height="5" fill="#EE2222"/>
+  <rect x="40" y="15" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="45" y="15" width="5" height="5" fill="#EE2222"/>
+  <rect x="50" y="15" width="5" height="5" fill="#EE2222"/>
+  <rect x="55" y="15" width="5" height="5" fill="#DD1111"/>
+  <rect x="60" y="15" width="5" height="5" fill="#AA0000"/>
+  <!-- Row 4: cap brim -->
+  <rect x="5" y="20" width="5" height="5" fill="#880000"/>
+  <rect x="10" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="15" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="20" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="25" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="30" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="35" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="40" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="45" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="50" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="55" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="60" y="20" width="5" height="5" fill="#AA0000"/>
+  <rect x="65" y="20" width="5" height="5" fill="#880000"/>
+  <!-- Row 5: hair + forehead -->
+  <rect x="10" y="25" width="5" height="5" fill="#5C2800"/>
+  <rect x="15" y="25" width="5" height="5" fill="#5C2800"/>
+  <rect x="20" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="25" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="30" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="35" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="40" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="45" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="50" y="25" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="55" y="25" width="5" height="5" fill="#5C2800"/>
+  <!-- Row 6: eyes -->
+  <rect x="10" y="30" width="5" height="5" fill="#5C2800"/>
+  <rect x="15" y="30" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="20" y="30" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="25" y="30" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="30" y="30" width="5" height="5" fill="#2244AA"/>
+  <rect x="35" y="30" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="40" y="30" width="5" height="5" fill="#FFFFFF"/>
+  <rect x="45" y="30" width="5" height="5" fill="#2244AA"/>
+  <rect x="50" y="30" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="55" y="30" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="60" y="30" width="5" height="5" fill="#5C2800"/>
+  <!-- Row 7: big nose -->
+  <rect x="10" y="35" width="5" height="5" fill="#5C2800"/>
+  <rect x="15" y="35" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="20" y="35" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="25" y="35" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="30" y="35" width="5" height="5" fill="#E8A060"/>
+  <rect x="35" y="35" width="5" height="5" fill="#E8A060"/>
+  <rect x="40" y="35" width="5" height="5" fill="#E8A060"/>
+  <rect x="45" y="35" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="50" y="35" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="55" y="35" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="60" y="35" width="5" height="5" fill="#5C2800"/>
+  <!-- Row 8: mustache -->
+  <rect x="15" y="40" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="20" y="40" width="5" height="5" fill="#5C2800"/>
+  <rect x="25" y="40" width="5" height="5" fill="#5C2800"/>
+  <rect x="30" y="40" width="5" height="5" fill="#E8A060"/>
+  <rect x="35" y="40" width="5" height="5" fill="#E8A060"/>
+  <rect x="40" y="40" width="5" height="5" fill="#E8A060"/>
+  <rect x="45" y="40" width="5" height="5" fill="#5C2800"/>
+  <rect x="50" y="40" width="5" height="5" fill="#5C2800"/>
+  <rect x="55" y="40" width="5" height="5" fill="#F5D6A0"/>
+  <!-- Row 9: mustache -->
+  <rect x="15" y="45" width="5" height="5" fill="#5C2800"/>
+  <rect x="20" y="45" width="5" height="5" fill="#5C2800"/>
+  <rect x="25" y="45" width="5" height="5" fill="#5C2800"/>
+  <rect x="30" y="45" width="5" height="5" fill="#5C2800"/>
+  <rect x="35" y="45" width="5" height="5" fill="#5C2800"/>
+  <rect x="40" y="45" width="5" height="5" fill="#5C2800"/>
+  <rect x="45" y="45" width="5" height="5" fill="#5C2800"/>
+  <rect x="50" y="45" width="5" height="5" fill="#5C2800"/>
+  <rect x="55" y="45" width="5" height="5" fill="#5C2800"/>
+  <!-- Row 10: mouth -->
+  <rect x="20" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="25" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="30" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="35" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="40" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="45" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="50" y="50" width="5" height="5" fill="#F5D6A0"/>
+  <!-- Row 11: chin -->
+  <rect x="25" y="55" width="5" height="5" fill="#E8B080"/>
+  <rect x="30" y="55" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="35" y="55" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="40" y="55" width="5" height="5" fill="#F5D6A0"/>
+  <rect x="45" y="55" width="5" height="5" fill="#E8B080"/>
+  <!-- Row 12: overalls -->
+  <rect x="20" y="60" width="5" height="5" fill="#EE2222"/>
+  <rect x="25" y="60" width="5" height="5" fill="#EE2222"/>
+  <rect x="30" y="60" width="5" height="5" fill="#2244AA"/>
+  <rect x="35" y="60" width="5" height="5" fill="#2244AA"/>
+  <rect x="40" y="60" width="5" height="5" fill="#2244AA"/>
+  <rect x="45" y="60" width="5" height="5" fill="#EE2222"/>
+  <rect x="50" y="60" width="5" height="5" fill="#EE2222"/>
+  <!-- Row 13 -->
+  <rect x="15" y="65" width="5" height="5" fill="#EE2222"/>
+  <rect x="20" y="65" width="5" height="5" fill="#EE2222"/>
+  <rect x="25" y="65" width="5" height="5" fill="#FFCC00"/>
+  <rect x="30" y="65" width="5" height="5" fill="#2244AA"/>
+  <rect x="35" y="65" width="5" height="5" fill="#2244AA"/>
+  <rect x="40" y="65" width="5" height="5" fill="#2244AA"/>
+  <rect x="45" y="65" width="5" height="5" fill="#FFCC00"/>
+  <rect x="50" y="65" width="5" height="5" fill="#EE2222"/>
+  <rect x="55" y="65" width="5" height="5" fill="#EE2222"/>
+  <!-- Row 14 -->
+  <rect x="15" y="70" width="5" height="5" fill="#EE2222"/>
+  <rect x="20" y="70" width="5" height="5" fill="#2244AA"/>
+  <rect x="25" y="70" width="5" height="5" fill="#2244AA"/>
+  <rect x="30" y="70" width="5" height="5" fill="#2244AA"/>
+  <rect x="35" y="70" width="5" height="5" fill="#2244AA"/>
+  <rect x="40" y="70" width="5" height="5" fill="#2244AA"/>
+  <rect x="45" y="70" width="5" height="5" fill="#2244AA"/>
+  <rect x="50" y="70" width="5" height="5" fill="#2244AA"/>
+  <rect x="55" y="70" width="5" height="5" fill="#EE2222"/>
+  <!-- Row 15 -->
+  <rect x="15" y="75" width="5" height="5" fill="#5C2800"/>
+  <rect x="20" y="75" width="5" height="5" fill="#5C2800"/>
+  <rect x="25" y="75" width="5" height="5" fill="#2244AA"/>
+  <rect x="30" y="75" width="5" height="5" fill="#2244AA"/>
+  <rect x="35" y="75" width="5" height="5" fill="#2244AA"/>
+  <rect x="40" y="75" width="5" height="5" fill="#2244AA"/>
+  <rect x="45" y="75" width="5" height="5" fill="#2244AA"/>
+  <rect x="50" y="75" width="5" height="5" fill="#5C2800"/>
+  <rect x="55" y="75" width="5" height="5" fill="#5C2800"/>
+</svg>
