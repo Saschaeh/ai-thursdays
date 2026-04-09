@@ -101,28 +101,65 @@ function sendNotificationEmail($data, $memberId, $message) {
     }
     if (!$email) return;
 
-    // Use PHPMailer if available
-    $autoload = __DIR__ . '/vendor/autoload.php';
-    if (file_exists($autoload)) {
-        require_once $autoload;
-        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-        try {
-            $mail->isSMTP();
-            $mail->Host = $config['host'];
-            $mail->SMTPAuth = true;
-            $mail->Username = $config['username'];
-            $mail->Password = $config['password'];
-            $mail->SMTPSecure = $config['encryption'] ?? 'tls';
-            $mail->Port = $config['port'] ?? 587;
-            $mail->setFrom($config['from_email'], $config['from_name'] ?? 'AI Thursdays');
-            $mail->addAddress($email);
-            $mail->isHTML(false);
-            $mail->Subject = 'Idle Tuesday on Thursdays';
-            $mail->Body = $message;
-            $mail->send();
-        } catch (\Exception $e) {
-            // Silently fail — don't break the API
+    $host = $config['host'];
+    $port = $config['port'] ?? 587;
+    $user = $config['username'];
+    $pass = $config['password'];
+    $from = $config['from_email'];
+    $fromName = $config['from_name'] ?? 'AI Thursdays';
+    $subject = 'Idle Tuesday on Thursdays';
+
+    try {
+        $sock = @fsockopen($host, $port, $errno, $errstr, 10);
+        if (!$sock) return;
+
+        $read = function() use ($sock) { return fgets($sock, 512); };
+        $send = function($cmd) use ($sock, $read) {
+            fwrite($sock, $cmd . "\r\n");
+            return $read();
+        };
+
+        $read(); // greeting
+        $send("EHLO localhost");
+        // Read all EHLO response lines
+        stream_set_timeout($sock, 2);
+        while ($line = fgets($sock, 512)) {
+            if (substr($line, 3, 1) === ' ') break;
         }
+
+        // STARTTLS
+        $send("STARTTLS");
+        stream_set_blocking($sock, true);
+        if (!@stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) return;
+
+        $send("EHLO localhost");
+        while ($line = fgets($sock, 512)) {
+            if (substr($line, 3, 1) === ' ') break;
+        }
+
+        // AUTH LOGIN
+        $send("AUTH LOGIN");
+        $send(base64_encode($user));
+        $resp = $send(base64_encode($pass));
+        if (substr($resp, 0, 3) !== '235') { fclose($sock); return; }
+
+        $send("MAIL FROM:<$from>");
+        $send("RCPT TO:<$email>");
+        $send("DATA");
+
+        $headers = "From: $fromName <$from>\r\n";
+        $headers .= "To: $email\r\n";
+        $headers .= "Subject: $subject\r\n";
+        $headers .= "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $headers .= "\r\n";
+        $headers .= str_replace("\n.", "\n..", $message);
+
+        $send($headers . "\r\n.");
+        $send("QUIT");
+        fclose($sock);
+    } catch (\Exception $e) {
+        // Silently fail
     }
 }
 

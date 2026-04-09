@@ -55,14 +55,6 @@ jobs:
               "cat > ~/public/Thursdays/smtp-config.php"
           fi
 
-          # Install PHPMailer if not present
-          ssh -i ~/.ssh/deploy_key -p $SSH_PORT $SSH_USER@$SSH_HOST \
-            "cd ~/public/Thursdays && if [ -d vendor/phpmailer ]; then echo 'PHPMailer already installed'; else echo 'Installing PHPMailer...'; composer require phpmailer/phpmailer --no-interaction 2>&1 || echo 'composer failed - trying manual install'; fi"
-
           # Verify SMTP config exists
           ssh -i ~/.ssh/deploy_key -p $SSH_PORT $SSH_USER@$SSH_HOST \
             "ls -la ~/public/Thursdays/smtp-config.php 2>&1 && echo 'SMTP config OK' || echo 'SMTP config MISSING'"
-
-          # Verify PHPMailer
-          ssh -i ~/.ssh/deploy_key -p $SSH_PORT $SSH_USER@$SSH_HOST \
-            "ls ~/public/Thursdays/vendor/autoload.php 2>&1 && echo 'Autoload OK' || echo 'Autoload MISSING'"
