@@ -97,7 +97,7 @@ export default function Home() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-950 bg-cover bg-center bg-fixed" style={{ backgroundImage: "linear-gradient(rgba(3,7,18,0.85), rgba(3,7,18,0.85)), url('/Thursdays/bg-moon.jpg')" }}>
+      <div className="min-h-screen flex items-center justify-center bg-gray-950 bg-cover bg-center bg-fixed" style={{ backgroundImage: "linear-gradient(rgba(3,7,18,0.85), rgba(3,7,18,0.85)), url('/Thursdays/bg-moon.jpg')", backgroundPosition: "center 20%" }}>
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-emerald-500 mb-4">
@@ -164,7 +164,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 bg-cover bg-center bg-fixed" style={{ backgroundImage: "linear-gradient(rgba(3,7,18,0.82), rgba(3,7,18,0.82)), url('/Thursdays/bg-moon.jpg')" }}>
+    <div className="min-h-screen bg-gray-950 text-gray-100 bg-cover bg-center bg-fixed" style={{ backgroundImage: "linear-gradient(rgba(3,7,18,0.82), rgba(3,7,18,0.82)), url('/Thursdays/bg-moon.jpg')", backgroundPosition: "center 20%" }}>
       <header className="bg-gray-900 border-b border-gray-800">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
