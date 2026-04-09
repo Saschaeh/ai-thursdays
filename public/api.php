@@ -85,11 +85,16 @@ function createNotification(&$data, $memberId, $type, $message, $ideaId = null) 
     return $notif;
 }
 
+function smtpLog($msg) {
+    file_put_contents(__DIR__ . '/data/smtp-debug.log', date('Y-m-d H:i:s') . ' ' . $msg . "\n", FILE_APPEND | LOCK_EX);
+}
+
 function sendNotificationEmail($data, $memberId, $message) {
+    smtpLog("START: member=$memberId msg=$message");
     $configFile = __DIR__ . '/smtp-config.php';
-    if (!file_exists($configFile)) return;
+    if (!file_exists($configFile)) { smtpLog("NO CONFIG"); return; }
     $config = require $configFile;
-    if (empty($config['enabled'])) return;
+    if (empty($config['enabled'])) { smtpLog("DISABLED"); return; }
 
     $email = null;
     foreach ($data['members'] as $m) {
@@ -521,6 +526,12 @@ if (preg_match('#^/members/(\d+)$#', $route, $m)) {
         }
         jsonResponse(['ok' => true]);
     }
+}
+
+// Debug route (temporary)
+if ($route === '/debug-smtp') {
+    $logFile = __DIR__ . '/data/smtp-debug.log';
+    jsonResponse(['log' => file_exists($logFile) ? file_get_contents($logFile) : 'no log', 'config_exists' => file_exists(__DIR__ . '/smtp-config.php')]);
 }
 
 http_response_code(404);
