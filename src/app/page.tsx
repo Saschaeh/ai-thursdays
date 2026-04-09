@@ -919,7 +919,7 @@ const AVAILABLE_AVATARS = [
   'ninja.svg', 'alien.svg', 'pirate.svg', 'astronaut.svg', 'viking.svg',
   'cat.svg', 'skull.svg', 'phoenix.svg', 'ghost.svg', 'crown.svg',
   'doggie.svg', 'vader.svg', 'link.svg', 'doomguy.svg', 'mario.svg',
-  'sonic.svg', 'masterchief.svg', 'pacman.svg',
+  'sonic.svg', 'masterchief.svg', 'pacman.svg', 'mushroom.svg', 'dragon.svg',
 ];
 
 function ProfilePage({ currentUser, members, ideas, onUpdate }: {
