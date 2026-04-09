@@ -173,9 +173,11 @@ export default function Home() {
                   <button
                     key={m.id}
                     onClick={() => selectUser(m)}
-                    className="w-full flex items-center gap-3 px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white hover:border-emerald-500/50 hover:bg-gray-800/80 transition text-left"
+                    className="group/btn w-full flex items-center gap-3 px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white hover:border-emerald-500/50 hover:bg-gray-800/80 transition text-left"
                   >
-                    <Avatar member={m} animate />
+                    <span className="group-hover/btn:animate-bounce inline-block">
+                      <Avatar member={m} />
+                    </span>
                     <span className="font-medium">{m.name}</span>
                   </button>
                 ))}
