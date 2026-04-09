@@ -34,16 +34,21 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '/Thursdays';
 
-function Avatar({ member, size = 'md' }: { member: { name: string; avatar?: string }; size?: 'sm' | 'md' | 'lg' }) {
+function Avatar({ member, size = 'md', animate = false }: { member: { name: string; avatar?: string }; size?: 'sm' | 'md' | 'lg'; animate?: boolean }) {
   const sizeClasses = { sm: 'w-6 h-6 text-xs', md: 'w-8 h-8 text-sm', lg: 'w-16 h-16 text-2xl' };
+  const animClass = animate ? 'hover:animate-bounce transition-transform hover:scale-110' : 'transition-transform hover:scale-110';
   if (member.avatar) {
-    return <img src={`${BASE}/avatars/${member.avatar}`} alt={member.name} className={`${sizeClasses[size]} rounded-full`} />;
+    return <img src={`${BASE}/avatars/${member.avatar}`} alt={member.name} className={`${sizeClasses[size]} rounded-full ${animClass}`} />;
   }
   return (
-    <div className={`${sizeClasses[size]} rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-semibold shrink-0`}>
+    <div className={`${sizeClasses[size]} rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-semibold shrink-0 ${animClass}`}>
       {member.name.charAt(0).toUpperCase()}
     </div>
   );
+}
+
+function findMemberAvatar(members: Member[], name: string): string | undefined {
+  return members.find(m => m.name === name)?.avatar;
 }
 
 async function api<T>(path: string, options?: RequestInit): Promise<T> {
@@ -170,7 +175,7 @@ export default function Home() {
                     onClick={() => selectUser(m)}
                     className="w-full flex items-center gap-3 px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white hover:border-emerald-500/50 hover:bg-gray-800/80 transition text-left"
                   >
-                    <Avatar member={m} />
+                    <Avatar member={m} animate />
                     <span className="font-medium">{m.name}</span>
                   </button>
                 ))}
@@ -562,8 +567,8 @@ function CommentReplyBox({ ideaId, parentId, currentUser, onSubmit }: {
   );
 }
 
-function CommentThread({ comment, allComments, ideaId, currentUser, depth, onUpdate }: {
-  comment: Comment; allComments: Comment[]; ideaId: number; currentUser: Member; depth: number; onUpdate: () => void;
+function CommentThread({ comment, allComments, ideaId, currentUser, members, depth, onUpdate }: {
+  comment: Comment; allComments: Comment[]; ideaId: number; currentUser: Member; members: Member[]; depth: number; onUpdate: () => void;
 }) {
   const [showReply, setShowReply] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -594,7 +599,7 @@ function CommentThread({ comment, allComments, ideaId, currentUser, depth, onUpd
     <div className={depth > 0 ? 'ml-4 pl-4 border-l-2 border-gray-800' : ''}>
       <div className="py-2">
         <div className="flex items-center gap-2 mb-1">
-          <Avatar member={{ name: comment.member_name || '' }} size="sm" />
+          <Avatar member={{ name: comment.member_name || '', avatar: findMemberAvatar(members, comment.member_name) }} size="sm" />
           <span className="font-medium text-sm text-gray-200">{comment.member_name}</span>
           <span className="text-xs text-gray-600">{timeAgo}</span>
           {(comment as Comment & { edited_at?: string }).edited_at && (
@@ -677,6 +682,7 @@ function CommentThread({ comment, allComments, ideaId, currentUser, depth, onUpd
               allComments={allComments}
               ideaId={ideaId}
               currentUser={currentUser}
+              members={members}
               depth={depth + 1}
               onUpdate={onUpdate}
             />
@@ -829,6 +835,7 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
                 allComments={idea.comments ?? []}
                 ideaId={idea.id}
                 currentUser={currentUser}
+                members={members}
                 depth={0}
                 onUpdate={onUpdate}
               />
