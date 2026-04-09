@@ -314,6 +314,43 @@ if (preg_match('#^/ideas/(\d+)/comments$#', $route, $m)) {
     }
 }
 
+// Route: /comments/:id (edit or delete)
+if (preg_match('#^/comments/(\d+)$#', $route, $m)) {
+    $cId = (int)$m[1];
+    $commentIdx = null;
+    foreach ($data['comments'] as $idx => $c) {
+        if ($c['id'] === $cId) { $commentIdx = $idx; break; }
+    }
+    if ($commentIdx === null) jsonResponse(['error' => 'Not found'], 404);
+
+    if ($method === 'PATCH') {
+        $content = trim($body['content'] ?? '');
+        if (!$content) jsonResponse(['error' => 'Content is required'], 400);
+        $data['comments'][$commentIdx]['content'] = $content;
+        $data['comments'][$commentIdx]['edited_at'] = date('Y-m-d H:i:s');
+        saveData($data);
+        jsonResponse($data['comments'][$commentIdx]);
+    }
+
+    if ($method === 'DELETE') {
+        // Delete this comment and all its children recursively
+        $toDelete = [$cId];
+        $changed = true;
+        while ($changed) {
+            $changed = false;
+            foreach ($data['comments'] as $c) {
+                if (in_array($c['parent_id'], $toDelete) && !in_array($c['id'], $toDelete)) {
+                    $toDelete[] = $c['id'];
+                    $changed = true;
+                }
+            }
+        }
+        $data['comments'] = array_values(array_filter($data['comments'], fn($c) => !in_array($c['id'], $toDelete)));
+        saveData($data);
+        jsonResponse(['ok' => true]);
+    }
+}
+
 // Route: /ideas/:id/votes
 if (preg_match('#^/ideas/(\d+)/votes$#', $route, $m)) {
     $ideaId = (int)$m[1];

@@ -533,8 +533,28 @@ function CommentThread({ comment, allComments, ideaId, currentUser, depth, onUpd
 }) {
   const [showReply, setShowReply] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.content);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const children = allComments.filter(c => c.parent_id === comment.id);
   const timeAgo = formatTimeAgo(comment.created_at);
+  const isOwner = currentUser.id === comment.member_id;
+
+  const handleEdit = async () => {
+    if (!editText.trim()) return;
+    await api(`/comments/${comment.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ content: editText }),
+    });
+    setEditing(false);
+    onUpdate();
+  };
+
+  const handleDelete = async () => {
+    await api(`/comments/${comment.id}`, { method: 'DELETE' });
+    setConfirmDelete(false);
+    onUpdate();
+  };
 
   return (
     <div className={depth > 0 ? 'ml-4 pl-4 border-l-2 border-gray-800' : ''}>
@@ -545,8 +565,27 @@ function CommentThread({ comment, allComments, ideaId, currentUser, depth, onUpd
           </div>
           <span className="font-medium text-sm text-gray-200">{comment.member_name}</span>
           <span className="text-xs text-gray-600">{timeAgo}</span>
+          {(comment as Comment & { edited_at?: string }).edited_at && (
+            <span className="text-xs text-gray-700">(edited)</span>
+          )}
         </div>
-        <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed ml-8">{comment.content}</p>
+        {editing ? (
+          <div className="ml-8 space-y-2">
+            <input
+              value={editText}
+              onChange={e => setEditText(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleEdit()}
+              autoFocus
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+            />
+            <div className="flex gap-2">
+              <button onClick={handleEdit} className="px-3 py-1 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-400 transition">Save</button>
+              <button onClick={() => { setEditing(false); setEditText(comment.content); }} className="px-3 py-1 text-gray-400 text-xs hover:text-gray-200 transition">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed ml-8">{comment.content}</p>
+        )}
         <div className="flex items-center gap-3 ml-8 mt-1">
           <button
             onClick={() => setShowReply(!showReply)}
@@ -554,6 +593,29 @@ function CommentThread({ comment, allComments, ideaId, currentUser, depth, onUpd
           >
             Reply
           </button>
+          {isOwner && !editing && (
+            <>
+              <button
+                onClick={() => setEditing(true)}
+                className="text-xs text-gray-600 hover:text-emerald-400 transition"
+              >
+                Edit
+              </button>
+              {!confirmDelete ? (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-xs text-gray-600 hover:text-red-400 transition"
+                >
+                  Delete
+                </button>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <button onClick={handleDelete} className="text-xs text-red-400 hover:text-red-300 font-medium transition">Confirm</button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs text-gray-500 hover:text-gray-300 transition">Cancel</button>
+                </span>
+              )}
+            </>
+          )}
           {children.length > 0 && (
             <button
               onClick={() => setCollapsed(!collapsed)}
