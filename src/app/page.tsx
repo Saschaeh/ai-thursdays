@@ -1020,6 +1020,15 @@ const AVAILABLE_AVATARS = [
   'sonic.svg', 'masterchief.svg', 'pacman.svg', 'mushroom.svg', 'dragon.svg',
 ];
 
+const AVATAR_NAMES: Record<string, string> = {
+  'dan.svg': 'Dan', 'lion.svg': 'Lion', 'migs.svg': 'Migs', 'ben.svg': 'Ben', 'sasch.svg': 'Sasch',
+  'ninja.svg': 'Ninja', 'alien.svg': 'Alien', 'pirate.svg': 'Pirate', 'astronaut.svg': 'Astronaut',
+  'viking.svg': 'Viking', 'cat.svg': 'Cat', 'skull.svg': 'Skull', 'phoenix.svg': 'Phoenix',
+  'ghost.svg': 'Ghost', 'crown.svg': 'Crown', 'doggie.svg': 'Doggie', 'vader.svg': 'Darth Vader',
+  'link.svg': 'Link', 'doomguy.svg': 'Doom Guy', 'mario.svg': 'Mario', 'sonic.svg': 'Sonic',
+  'masterchief.svg': 'Master Chief', 'pacman.svg': 'Pac-Man', 'mushroom.svg': 'Mushroom', 'dragon.svg': 'Dragon',
+};
+
 function ProfilePage({ currentUser, members, ideas, onUpdate }: {
   currentUser: Member; members: Member[]; ideas: Idea[];
   onUpdate: (member: Member) => void;
@@ -1052,7 +1061,12 @@ function ProfilePage({ currentUser, members, ideas, onUpdate }: {
         <div className="flex items-center gap-4 mb-6">
           <Avatar member={{ ...currentUser, avatar: selectedAvatar }} size="lg" />
           <div>
-            <h2 className="text-xl font-semibold text-white">{currentUser.name}</h2>
+            <h2 className="text-xl font-semibold text-white">
+              {currentUser.name}
+              {selectedAvatar && AVATAR_NAMES[selectedAvatar] && (
+                <span className="text-sm text-gray-600 font-normal ml-2">(aka {AVATAR_NAMES[selectedAvatar]})</span>
+              )}
+            </h2>
             <p className="text-sm text-gray-500">Member since {new Date(currentUser.created_at ?? '').toLocaleDateString()}</p>
           </div>
         </div>
