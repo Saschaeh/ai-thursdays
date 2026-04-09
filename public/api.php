@@ -191,29 +191,35 @@ if (!empty($body['website'])) {
 
 $data = loadData();
 
-// Migration: set emails, avatars, and rename Sascha -> Sasch
-if (empty($data['_migrated_v2'])) {
-    $emailMap = [
-        'dan' => ['email' => 'daneel@pros.co.za', 'avatar' => 'dan.svg'],
-        'lion' => ['email' => 'Lionel.moyal@gmail.com', 'avatar' => 'lion.svg'],
-        'migs' => ['email' => 'migalvanas@gmail.com', 'avatar' => 'migs.svg'],
-        'ben' => ['email' => 'vorsterben@gmail.com', 'avatar' => 'ben.svg'],
-        'sasch' => ['email' => 'saschaeh@gmail.com', 'avatar' => 'sasch.svg'],
+// Migration v3: force-set emails, avatars, and rename Sascha -> Sasch
+if (empty($data['_migrated_v3'])) {
+    $nameMap = [
+        'sascha' => 'Sasch',
+    ];
+    $profileMap = [
+        'dan'  => ['email' => 'daneel@pros.co.za',       'avatar' => 'dan.svg'],
+        'lion' => ['email' => 'Lionel.moyal@gmail.com',   'avatar' => 'lion.svg'],
+        'migs' => ['email' => 'migalvanas@gmail.com',     'avatar' => 'migs.svg'],
+        'ben'  => ['email' => 'vorsterben@gmail.com',     'avatar' => 'ben.svg'],
+        'sasc' => ['email' => 'saschaeh@gmail.com',       'avatar' => 'sasch.svg'],
     ];
     foreach ($data['members'] as &$member) {
-        // Rename Sascha -> Sasch
-        if (strtolower($member['name']) === 'sascha') {
-            $member['name'] = 'Sasch';
+        $lower = strtolower($member['name']);
+        // Rename
+        if (isset($nameMap[$lower])) {
+            $member['name'] = $nameMap[$lower];
+            $lower = strtolower($member['name']);
         }
-        $key = strtolower(substr($member['name'], 0, 4));
-        if (!isset($emailMap[$key])) $key = strtolower(substr($member['name'], 0, 3));
-        if (isset($emailMap[$key])) {
-            $member['email'] = $emailMap[$key]['email'];
-            $member['avatar'] = $emailMap[$key]['avatar'];
+        // Match by first 4 chars, then 3
+        $key = substr($lower, 0, 4);
+        if (!isset($profileMap[$key])) $key = substr($lower, 0, 3);
+        if (isset($profileMap[$key])) {
+            $member['email'] = $profileMap[$key]['email'];
+            $member['avatar'] = $profileMap[$key]['avatar'];
         }
     }
     unset($member);
-    $data['_migrated_v2'] = true;
+    $data['_migrated_v3'] = true;
     saveData($data);
 }
 
