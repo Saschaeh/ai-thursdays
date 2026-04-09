@@ -92,7 +92,7 @@ function createNotification(&$data, $memberId, $type, $message, $ideaId = null, 
             }
         }
     }
-    sendNotificationEmail($data, $memberId, $message, $actorEmail, $actorName);
+    sendNotificationEmail($data, $memberId, $message, $actorEmail, $actorName, $ideaId);
     return $notif;
 }
 
@@ -106,14 +106,16 @@ function loadSmtpConfig() {
     return $config;
 }
 
-function sendNotificationEmail($data, $memberId, $message, $actorEmail = null, $actorName = null) {
+function sendNotificationEmail($data, $memberId, $message, $actorEmail = null, $actorName = null, $ideaId = null) {
     $config = loadSmtpConfig();
     if (!$config || empty($config['enabled'])) return;
 
     $email = null;
+    $recipientName = null;
     foreach ($data['members'] as $m) {
-        if ($m['id'] === (int)$memberId && !empty($m['email'])) {
-            $email = $m['email'];
+        if ($m['id'] === (int)$memberId) {
+            $email = $m['email'] ?? null;
+            $recipientName = $m['name'] ?? null;
             break;
         }
     }
@@ -166,6 +168,17 @@ function sendNotificationEmail($data, $memberId, $message, $actorEmail = null, $
         $send("RCPT TO:<$email>");
         $send("DATA");
 
+        $link = "https://idletuesday.ai/Thursdays/";
+        $greeting = $recipientName ? "Hey $recipientName" : "Hey";
+        $emailBody = "$greeting, Thursday Warrior!\n\n";
+        $emailBody .= "You have a notification on Idle Tuesday on Thursdays:\n\n";
+        $emailBody .= "  $message\n\n";
+        if ($ideaId) {
+            $emailBody .= "Head over and check it out:\n$link\n\n";
+        }
+        $emailBody .= "Give it a review when you get a chance.\n\n";
+        $emailBody .= "Thanks!\nIdle Tuesday on Thursdays";
+
         $body = "From: $fromName <$from>\r\n";
         $body .= "Reply-To: $replyTo\r\n";
         $body .= "To: $email\r\n";
@@ -173,7 +186,7 @@ function sendNotificationEmail($data, $memberId, $message, $actorEmail = null, $
         $body .= "MIME-Version: 1.0\r\n";
         $body .= "Content-Type: text/plain; charset=UTF-8\r\n";
         $body .= "\r\n";
-        $body .= str_replace("\n.", "\n..", $message);
+        $body .= str_replace("\n.", "\n..", $emailBody);
 
         $send($body . "\r\n.");
         $send("QUIT");
