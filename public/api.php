@@ -351,20 +351,22 @@ if (preg_match('#^/ideas/(\d+)/comments$#', $route, $m)) {
         ];
         $data['comments'][] = $comment;
 
-        // Notify: find the idea to get submitter and assignees
+        // Notify submitter + all assignees (except the commenter themselves)
         $commenterName = getMemberName($data['members'], $comment['member_id']) ?? 'Someone';
+        $notified = [];
         foreach ($data['ideas'] as $idea) {
             if ($idea['id'] === $ideaId) {
                 $ideaTitle = $idea['title'];
-                // Notify submitter (if not the commenter)
+                // Notify submitter
                 if ($idea['submitted_by'] && $idea['submitted_by'] !== $comment['member_id']) {
                     createNotification($data, $idea['submitted_by'], 'comment', "$commenterName commented on \"$ideaTitle\"", $ideaId);
+                    $notified[] = $idea['submitted_by'];
                 }
-                // Notify assignees (if not the commenter)
+                // Notify all assignees (skip commenter and already-notified submitter)
                 $assignees = $idea['assigned_to'] ?? [];
                 if (!is_array($assignees)) $assignees = $assignees ? [$assignees] : [];
                 foreach ($assignees as $assigneeId) {
-                    if ($assigneeId !== $comment['member_id'] && $assigneeId !== $idea['submitted_by']) {
+                    if ($assigneeId !== $comment['member_id'] && !in_array($assigneeId, $notified)) {
                         createNotification($data, $assigneeId, 'comment', "$commenterName commented on \"$ideaTitle\"", $ideaId);
                     }
                 }
