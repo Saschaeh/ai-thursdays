@@ -1088,7 +1088,7 @@ function ProfilePage({ currentUser, members, ideas, onUpdate }: {
           </div>
 
           <div>
-            <label className="text-sm text-gray-400 block mb-2">Avatar</label>
+            <label className="text-sm text-gray-400 block mb-2">Pick your avatar</label>
             <div className="flex gap-3 flex-wrap">
               {AVAILABLE_AVATARS.map(av => (
                 <button
