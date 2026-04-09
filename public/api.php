@@ -85,18 +85,12 @@ function createNotification(&$data, $memberId, $type, $message, $ideaId = null) 
     return $notif;
 }
 
-function smtpLog($msg) {
-    $logFile = __DIR__ . '/data/smtp-debug.log';
-    file_put_contents($logFile, date('Y-m-d H:i:s') . ' ' . $msg . "\n", FILE_APPEND | LOCK_EX);
-}
-
 function sendNotificationEmail($data, $memberId, $message) {
     $configFile = __DIR__ . '/smtp-config.php';
-    if (!file_exists($configFile)) { smtpLog("NO CONFIG FILE"); return; }
+    if (!file_exists($configFile)) return;
     $config = require $configFile;
-    if (empty($config['enabled'])) { smtpLog("CONFIG DISABLED"); return; }
+    if (empty($config['enabled'])) return;
 
-    // Find member email
     $email = null;
     foreach ($data['members'] as $m) {
         if ($m['id'] === (int)$memberId && !empty($m['email'])) {
@@ -104,7 +98,7 @@ function sendNotificationEmail($data, $memberId, $message) {
             break;
         }
     }
-    if (!$email) { smtpLog("NO EMAIL for member $memberId"); return; }
+    if (!$email) return;
 
     $host = $config['host'];
     $port = $config['port'] ?? 587;
@@ -114,35 +108,26 @@ function sendNotificationEmail($data, $memberId, $message) {
     $fromName = $config['from_name'] ?? 'AI Thursdays';
     $subject = 'Idle Tuesday on Thursdays';
 
-    smtpLog("SENDING to $email via $host:$port from $from");
-
     try {
         $sock = @fsockopen($host, $port, $errno, $errstr, 10);
-        if (!$sock) { smtpLog("CONNECT FAILED: $errno $errstr"); return; }
+        if (!$sock) return;
 
         $read = function() use ($sock) { return trim(fgets($sock, 512)); };
         $send = function($cmd) use ($sock, $read) {
             fwrite($sock, $cmd . "\r\n");
-            $resp = $read();
-            return $resp;
+            return $read();
         };
 
-        $greeting = $read();
-        smtpLog("GREETING: $greeting");
-
+        $read();
         $send("EHLO localhost");
         stream_set_timeout($sock, 2);
         while ($line = fgets($sock, 512)) {
             if (substr(trim($line), 3, 1) === ' ') break;
         }
 
-        $resp = $send("STARTTLS");
-        smtpLog("STARTTLS: $resp");
-
+        $send("STARTTLS");
         stream_set_blocking($sock, true);
-        $crypto = @stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
-        if (!$crypto) { smtpLog("TLS FAILED"); fclose($sock); return; }
-        smtpLog("TLS OK");
+        if (!@stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) { fclose($sock); return; }
 
         $send("EHLO localhost");
         while ($line = fgets($sock, 512)) {
@@ -152,15 +137,11 @@ function sendNotificationEmail($data, $memberId, $message) {
         $send("AUTH LOGIN");
         $send(base64_encode($user));
         $resp = $send(base64_encode($pass));
-        smtpLog("AUTH: $resp");
         if (substr($resp, 0, 3) !== '235') { fclose($sock); return; }
 
-        $resp = $send("MAIL FROM:<$from>");
-        smtpLog("MAIL FROM: $resp");
-        $resp = $send("RCPT TO:<$email>");
-        smtpLog("RCPT TO: $resp");
-        $resp = $send("DATA");
-        smtpLog("DATA: $resp");
+        $send("MAIL FROM:<$from>");
+        $send("RCPT TO:<$email>");
+        $send("DATA");
 
         $body = "From: $fromName <$from>\r\n";
         $body .= "To: $email\r\n";
@@ -170,13 +151,11 @@ function sendNotificationEmail($data, $memberId, $message) {
         $body .= "\r\n";
         $body .= str_replace("\n.", "\n..", $message);
 
-        $resp = $send($body . "\r\n.");
-        smtpLog("SEND RESULT: $resp");
+        $send($body . "\r\n.");
         $send("QUIT");
         fclose($sock);
-        smtpLog("DONE");
     } catch (\Exception $e) {
-        smtpLog("EXCEPTION: " . $e->getMessage());
+        // Silently fail
     }
 }
 
@@ -540,18 +519,6 @@ if (preg_match('#^/members/(\d+)$#', $route, $m)) {
         }
         jsonResponse(['ok' => true]);
     }
-}
-
-// Route: /test-email (debug - remove after confirming)
-if ($route === '/test-email') {
-    $memberId = (int)($_GET['member_id'] ?? 0);
-    if ($memberId) {
-        sendNotificationEmail($data, $memberId, 'Test email from AI Thursdays! If you see this, notifications are working.');
-        $logFile = __DIR__ . '/data/smtp-debug.log';
-        $log = file_exists($logFile) ? file_get_contents($logFile) : 'No log file';
-        jsonResponse(['sent' => true, 'log' => $log]);
-    }
-    jsonResponse(['error' => 'Provide member_id'], 400);
 }
 
 http_response_code(404);
