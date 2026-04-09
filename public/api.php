@@ -537,18 +537,56 @@ if ($route === '/test-email') {
     if (!$mid) jsonResponse(['error' => 'need member_id'], 400);
     $log = [];
     $config = loadSmtpConfig();
-    $log[] = 'config: ' . ($config ? json_encode($config) : 'NULL');
     $email = null;
     foreach ($data['members'] as $m) {
-        if ($m['id'] === $mid) { $email = $m['email'] ?? ''; $log[] = "member: {$m['name']} email: $email"; break; }
+        if ($m['id'] === $mid) { $email = $m['email'] ?? ''; break; }
     }
-    if ($email && $config && !empty($config['enabled'])) {
-        sendNotificationEmail($data, $mid, 'Test from debug route');
-        $log[] = 'sendNotificationEmail called';
-    } else {
-        $log[] = 'SKIPPED: email=' . ($email ?: 'empty') . ' config_enabled=' . ($config['enabled'] ?? 'unset');
-    }
-    jsonResponse(['log' => $log]);
+    if (!$email) jsonResponse(['error' => 'no email for member']);
+
+    // Inline SMTP with full logging
+    $host = $config['host'];
+    $port = $config['port'];
+    $sock = @fsockopen($host, $port, $errno, $errstr, 10);
+    if (!$sock) { jsonResponse(['error' => "connect failed: $errno $errstr"]); }
+
+    $read = function() use ($sock) { return trim(fgets($sock, 512)); };
+    $send = function($cmd) use ($sock, $read, &$log) {
+        fwrite($sock, $cmd . "\r\n");
+        $r = $read();
+        $log[] = "> " . (strlen($cmd) > 50 ? substr($cmd, 0, 50) . '...' : $cmd) . " => $r";
+        return $r;
+    };
+
+    $log[] = "greeting: " . $read();
+    $send("EHLO localhost");
+    stream_set_timeout($sock, 2);
+    while ($line = fgets($sock, 512)) { if (substr(trim($line), 3, 1) === ' ') break; }
+
+    $send("STARTTLS");
+    stream_set_blocking($sock, true);
+    $tls = @stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+    $log[] = "TLS: " . ($tls ? "OK" : "FAILED");
+    if (!$tls) { fclose($sock); jsonResponse(['log' => $log]); }
+
+    $send("EHLO localhost");
+    while ($line = fgets($sock, 512)) { if (substr(trim($line), 3, 1) === ' ') break; }
+
+    $send("AUTH LOGIN");
+    $send(base64_encode($config['username']));
+    $send(base64_encode($config['password']));
+
+    $from = $config['from_email'];
+    $fromName = $config['from_name'];
+    $send("MAIL FROM:<$from>");
+    $send("RCPT TO:<$email>");
+    $send("DATA");
+
+    $body = "From: $fromName <$from>\r\nTo: $email\r\nSubject: Test Email - Idle Tuesday\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\nThis is a test email sent at " . date('Y-m-d H:i:s') . " to verify notifications work.";
+    $send($body . "\r\n.");
+    $send("QUIT");
+    fclose($sock);
+
+    jsonResponse(['to' => $email, 'log' => $log]);
 }
 
 http_response_code(404);
