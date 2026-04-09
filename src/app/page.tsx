@@ -439,7 +439,9 @@ export default function Home() {
         )}
 
         {tab === 'diary' && (
-          <CalendarView ideas={ideas} />
+          <CalendarView ideas={ideas} onSelectIdea={(id) => {
+            api<Idea>(`/ideas/${id}`).then(setSelectedIdea);
+          }} />
         )}
 
         {tab === 'profile' && (
@@ -1073,7 +1075,7 @@ function ProfilePage({ currentUser, members, ideas, onUpdate }: {
   );
 }
 
-function CalendarView({ ideas }: { ideas: Idea[] }) {
+function CalendarView({ ideas, onSelectIdea }: { ideas: Idea[]; onSelectIdea: (id: number) => void }) {
   const [currentMonth, setCurrentMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1170,7 +1172,8 @@ function CalendarView({ ideas }: { ideas: Idea[] }) {
               {dayIdeas.map(idea => (
                 <div
                   key={idea.id}
-                  className={`text-xs px-1.5 py-1 rounded-md mb-1 truncate ${
+                  onClick={() => onSelectIdea(idea.id)}
+                  className={`text-xs px-1.5 py-1 rounded-md mb-1 truncate cursor-pointer hover:opacity-80 transition ${
                     idea.status === 'completed'
                       ? 'bg-green-500/10 text-green-400 border border-green-500/20'
                       : 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20'
@@ -1189,7 +1192,7 @@ function CalendarView({ ideas }: { ideas: Idea[] }) {
       <div className="mt-6 space-y-3">
         <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Upcoming Presentations</h3>
         {ideas.filter(i => i.target_date && (i.status === 'assigned' || i.status === 'in-progress')).sort((a, b) => (a.target_date ?? '').localeCompare(b.target_date ?? '')).map(idea => (
-          <div key={idea.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between">
+          <div key={idea.id} onClick={() => onSelectIdea(idea.id)} className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-gray-700 transition">
             <div>
               <h4 className="font-medium text-white text-sm">{idea.title}</h4>
               <p className="text-xs text-gray-500 mt-0.5">
