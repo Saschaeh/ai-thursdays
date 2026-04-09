@@ -34,8 +34,8 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '/Thursdays';
 
-function Avatar({ member, size = 'md', animate = false }: { member: { name: string; avatar?: string }; size?: 'sm' | 'md' | 'lg'; animate?: boolean }) {
-  const sizeClasses = { sm: 'w-6 h-6 text-xs', md: 'w-8 h-8 text-sm', lg: 'w-16 h-16 text-2xl' };
+function Avatar({ member, size = 'md', animate = false }: { member: { name: string; avatar?: string }; size?: 'sm' | 'md' | 'lg' | 'ml'; animate?: boolean }) {
+  const sizeClasses = { sm: 'w-6 h-6 text-xs', md: 'w-8 h-8 text-sm', ml: 'w-13 h-13 text-xl', lg: 'w-16 h-16 text-2xl' };
   const animClass = animate ? 'hover:animate-bounce transition-transform hover:scale-110' : 'transition-transform hover:scale-110';
   if (member.avatar) {
     return <img src={`${BASE}/avatars/${member.avatar}`} alt={member.name} className={`${sizeClasses[size]} rounded-full ${animClass}`} />;
@@ -493,32 +493,30 @@ function IdeaCard({ idea, members, onSelect, onVote }: {
       className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition cursor-pointer group"
       onClick={onSelect}
     >
-      <div className="flex items-start gap-4">
-        <div className="shrink-0 pt-0.5">
-          <Avatar member={submitter || { name: idea.submitted_by_name || '?' }} size="lg" />
-        </div>
+      <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <h3 className="font-semibold text-white group-hover:text-emerald-400 transition">{idea.title}</h3>
-          </div>
           <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <h3 className="font-semibold text-white truncate group-hover:text-emerald-400 transition">{idea.title}</h3>
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
               {STATUS_LABELS[idea.status]}
             </span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">{idea.category}</span>
-            <span className="text-xs text-gray-500">by <span className="text-gray-400">{idea.submitted_by_name}</span></span>
           </div>
           {idea.description && (
             <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">{idea.description}</p>
           )}
-          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+          <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+            <span className="flex items-center gap-1.5">
+              <Avatar member={submitter || { name: idea.submitted_by_name || '?' }} size="sm" />
+              <span className="text-gray-400">{idea.submitted_by_name}</span>
+            </span>
             {idea.assigned_to_name && <span>assigned to <strong className="text-gray-400">{idea.assigned_to_name}</strong></span>}
             {idea.comment_count > 0 && <span>{idea.comment_count} comment{idea.comment_count !== 1 ? 's' : ''}</span>}
           </div>
         </div>
         <button
           onClick={e => { e.stopPropagation(); onVote(); }}
-          className="flex flex-col items-center px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:border-emerald-500/50 hover:bg-gray-750 transition text-sm min-w-[52px] shrink-0"
+          className="flex flex-col items-center px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:border-emerald-500/50 hover:bg-gray-750 transition text-sm min-w-[52px]"
           title="Click to toggle your vote"
         >
           <svg className="w-4 h-4 text-emerald-500 mb-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3l-7 7h4v7h6v-7h4L10 3z"/></svg>
@@ -773,14 +771,17 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
       <div className="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="p-6">
           <div className="flex justify-between items-start mb-5">
-            <div>
-              <h2 className="text-xl font-semibold text-white">{idea.title}</h2>
-              <div className="flex items-center gap-2 mt-2">
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
-                  {STATUS_LABELS[idea.status]}
-                </span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">{idea.category}</span>
-                <span className="text-xs text-gray-500">by <span className="text-gray-400">{idea.submitted_by_name}</span></span>
+            <div className="flex items-start gap-4">
+              <Avatar member={members.find(m => m.name === idea.submitted_by_name) || { name: idea.submitted_by_name || '?' }} size="ml" />
+              <div>
+                <h2 className="text-xl font-semibold text-white">{idea.title}</h2>
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
+                    {STATUS_LABELS[idea.status]}
+                  </span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">{idea.category}</span>
+                  <span className="text-xs text-gray-500">by <span className="text-gray-400">{idea.submitted_by_name}</span></span>
+                </div>
               </div>
             </div>
             <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-2xl leading-none transition">&times;</button>
