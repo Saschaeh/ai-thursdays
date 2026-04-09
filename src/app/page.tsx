@@ -1061,12 +1061,7 @@ function ProfilePage({ currentUser, members, ideas, onUpdate }: {
         <div className="flex items-center gap-4 mb-6">
           <Avatar member={{ ...currentUser, avatar: selectedAvatar }} size="lg" />
           <div>
-            <h2 className="text-xl font-semibold text-white">
-              {currentUser.name}
-              {selectedAvatar && AVATAR_NAMES[selectedAvatar] && (
-                <span className="text-sm text-gray-600 font-normal ml-2">(aka {AVATAR_NAMES[selectedAvatar]})</span>
-              )}
-            </h2>
+            <h2 className="text-xl font-semibold text-white">{currentUser.name}</h2>
             <p className="text-sm text-gray-500">Member since {new Date(currentUser.created_at ?? '').toLocaleDateString()}</p>
           </div>
         </div>
