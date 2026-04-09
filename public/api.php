@@ -577,11 +577,13 @@ if ($route === '/test-email') {
 
     $from = $config['from_email'];
     $fromName = $config['from_name'];
-    $send("MAIL FROM:<$from>");
+    // Try with saschaeh@gmail.com as sender to test deliverability
+    $testFrom = 'saschaeh@gmail.com';
+    $send("MAIL FROM:<$testFrom>");
     $send("RCPT TO:<$email>");
     $send("DATA");
 
-    $body = "From: $fromName <$from>\r\nTo: $email\r\nSubject: Test Email - Idle Tuesday\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\nThis is a test email sent at " . date('Y-m-d H:i:s') . " to verify notifications work.";
+    $body = "From: $fromName <$testFrom>\r\nTo: $email\r\nSubject: Test Email - Idle Tuesday\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\nThis is a test email sent at " . date('Y-m-d H:i:s') . " to verify notifications work.";
     $send($body . "\r\n.");
     $send("QUIT");
     fclose($sock);
