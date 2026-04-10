@@ -285,7 +285,7 @@ export default function Home() {
                 )}
               </button>
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-16 sm:top-full sm:mt-2 sm:w-80 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-50 overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
                     <span className="text-sm font-semibold text-white">Notifications</span>
                     {unreadCount > 0 && (
