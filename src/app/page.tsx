@@ -257,17 +257,17 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 bg-cover bg-center bg-fixed" style={{ backgroundImage: "linear-gradient(rgba(3,7,18,0.82), rgba(3,7,18,0.82)), url('/Thursdays/bg-moon.jpg')", backgroundPosition: "center 20%" }}>
+    <div className="min-h-screen bg-gray-950 text-gray-100 bg-cover bg-center bg-fixed overflow-x-hidden" style={{ backgroundImage: "linear-gradient(rgba(3,7,18,0.82), rgba(3,7,18,0.82)), url('/Thursdays/bg-moon.jpg')", backgroundPosition: "center 20%" }}>
       <header className="bg-gray-900 border-b border-gray-800">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={`${BASE}/icon.svg?v=4`} alt="AT" className="w-8 h-8 rounded-lg" />
-            <h1 className="text-lg font-semibold text-white tracking-tight">AI Thursdays</h1>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <img src={`${BASE}/icon.svg?v=4`} alt="AT" className="w-8 h-8 rounded-lg shrink-0" />
+            <h1 className="text-base sm:text-lg font-semibold text-white tracking-tight truncate">AI Thursdays</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <button onClick={() => setTab('profile')} className="flex items-center gap-2 hover:opacity-80 transition" title="View profile">
               <Avatar member={currentUser} size="sm" />
-              <span className="text-sm text-gray-400">Hi, <strong className="text-gray-200">{currentUser.name}</strong></span>
+              <span className="text-sm text-gray-400 hidden sm:inline">Hi, <strong className="text-gray-200">{currentUser.name}</strong></span>
             </button>
             <div className="relative" ref={notifRef}>
               <button
@@ -285,7 +285,7 @@ export default function Home() {
                 )}
               </button>
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-50 overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
                     <span className="text-sm font-semibold text-white">Notifications</span>
                     {unreadCount > 0 && (
@@ -348,7 +348,7 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 mt-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-6">
         <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit">
           <button
             onClick={() => setTab('ideas')}
@@ -378,7 +378,7 @@ export default function Home() {
       </div>
 
       {!currentUser.avatar && tab !== 'profile' && (
-        <div className="max-w-5xl mx-auto px-6 mt-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-4">
           <button
             onClick={() => setTab('profile')}
             className="w-full flex items-center gap-3 px-5 py-3 bg-amber-500/10 border border-amber-500/30 rounded-xl hover:bg-amber-500/20 transition"
@@ -390,7 +390,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto px-6 py-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         {tab === 'ideas' && (
           <>
             <div className="flex justify-between items-center mb-5">
@@ -578,33 +578,35 @@ function IdeaCard({ idea, members, onSelect, onVote }: {
   const submitter = members.find(m => m.name === idea.submitted_by_name);
   return (
     <div
-      className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition cursor-pointer group"
+      className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5 hover:border-gray-700 transition cursor-pointer group overflow-hidden"
       onClick={onSelect}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <h3 className="font-semibold text-white truncate group-hover:text-emerald-400 transition">{idea.title}</h3>
+            <h3 className="font-semibold text-white group-hover:text-emerald-400 transition break-words min-w-0">{idea.title}</h3>
+          </div>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
               {STATUS_LABELS[idea.status]}
             </span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">{idea.category}</span>
           </div>
           {idea.description && (
-            <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">{idea.description}</p>
+            <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed break-words">{idea.description}</p>
           )}
-          <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+          <div className="flex items-center gap-3 mt-3 text-xs text-gray-500 flex-wrap">
             <span className="flex items-center gap-1.5">
               <Avatar member={submitter || { name: idea.submitted_by_name || '?' }} size="sm" />
               <span className="text-gray-400">{idea.submitted_by_name}</span>
             </span>
-            {idea.assigned_to_name && <span>assigned to <strong className="text-gray-400">{idea.assigned_to_name}</strong></span>}
+            {idea.assigned_to_name && <span className="truncate max-w-[140px]">→ <strong className="text-gray-400">{idea.assigned_to_name}</strong></span>}
             {idea.comment_count > 0 && <span>{idea.comment_count} comment{idea.comment_count !== 1 ? 's' : ''}</span>}
           </div>
         </div>
         <button
           onClick={e => { e.stopPropagation(); onVote(); }}
-          className="flex flex-col items-center px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:border-emerald-500/50 hover:bg-gray-750 transition text-sm min-w-[52px]"
+          className="flex flex-col items-center px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 hover:border-emerald-500/50 hover:bg-gray-750 transition text-sm min-w-[52px] shrink-0"
           title="Click to toggle your vote"
         >
           <svg className="w-4 h-4 text-emerald-500 mb-0.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 3l-7 7h4v7h6v-7h4L10 3z"/></svg>
@@ -857,9 +859,9 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
   const topLevelComments = (idea.comments ?? []).filter(c => !c.parent_id);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="p-6">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4" onClick={onClose}>
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-4 sm:p-6">
           <div className="flex justify-between items-start mb-5">
             <div className="flex items-start gap-4">
               <Avatar member={members.find(m => m.name === idea.submitted_by_name) || { name: idea.submitted_by_name || '?' }} size="ml" />
@@ -1057,7 +1059,7 @@ function ProfilePage({ currentUser, members, ideas, onUpdate }: {
 
   return (
     <div className="max-w-lg mx-auto">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-5">
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 mb-5">
         <div className="flex items-center gap-4 mb-6">
           <Avatar member={{ ...currentUser, avatar: selectedAvatar }} size="lg" />
           <div>
@@ -1239,7 +1241,7 @@ function CalendarView({ ideas, onSelectIdea }: { ideas: Idea[]; onSelectIdea: (i
           return (
             <div
               key={i}
-              className={`min-h-[100px] p-2 border-t border-l border-gray-800 first:border-l-0 ${
+              className={`min-h-[60px] sm:min-h-[100px] p-1 sm:p-2 border-t border-l border-gray-800 first:border-l-0 overflow-hidden ${
                 !inMonth ? 'bg-gray-950/50' : 'bg-gray-900/50'
               } ${i % 7 === 0 ? 'border-l-0' : ''} ${i < 7 ? 'border-t-0' : ''}`}
             >
