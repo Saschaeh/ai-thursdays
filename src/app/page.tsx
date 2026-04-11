@@ -496,6 +496,7 @@ function NewIdeaForm({ currentUser, onSubmit, onCancel }: {
   const [hp, setHp] = useState('');
   const [showLinks, setShowLinks] = useState(false);
   const [links, setLinks] = useState<string[]>([]);
+  const [showFireworks, setShowFireworks] = useState(false);
 
   const addLink = () => { if (links.length < 3) setLinks([...links, '']); };
   const updateLink = (i: number, val: string) => { const l = [...links]; l[i] = val; setLinks(l); };
@@ -507,11 +508,13 @@ function NewIdeaForm({ currentUser, onSubmit, onCancel }: {
       method: 'POST',
       body: JSON.stringify({ title, description, category, submitted_by: currentUser.id, links: links.filter(l => l.trim()), website: hp }),
     });
-    onSubmit();
+    setShowFireworks(true);
+    setTimeout(() => onSubmit(), 1500);
   };
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-5">
+      {showFireworks && <Fireworks onDone={() => setShowFireworks(false)} />}
       <h3 className="font-semibold text-white mb-4">New Idea</h3>
       <input
         value={title}
@@ -1401,8 +1404,13 @@ function RequestsPage({ currentUser }: { currentUser: Member }) {
     load();
   };
 
+  const deleteChangelog = async (id: number) => {
+    await api(`/changelog/${id}`, { method: 'DELETE' });
+    load();
+  };
+
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl">
       {showFireworks && <Fireworks onDone={() => setShowFireworks(false)} />}
       <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit mb-5">
         <button
@@ -1463,25 +1471,29 @@ function RequestsPage({ currentUser }: { currentUser: Member }) {
       )}
 
       {section === 'changelog' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {changelog.length > 0 && (
-            <>
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Recently Completed</h3>
-              {changelog.map(entry => (
-                <div key={entry.id} className="bg-gray-900 border border-emerald-500/20 rounded-xl p-4 sm:p-5">
-                  <div className="flex items-start gap-2">
-                    <span className="text-emerald-400 mt-0.5">✓</span>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-200 whitespace-pre-wrap">{entry.content}</p>
-                      <p className="text-xs text-gray-600 mt-2">
-                        requested by <span className="text-gray-500">{entry.submitted_by_name}</span> — completed {formatTimeAgo(entry.completed_at)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mt-6 mb-2">Version History</h3>
-            </>
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-semibold text-emerald-400">Latest</span>
+                <span className="text-xs text-gray-600">user requests</span>
+              </div>
+              <ul className="space-y-1.5">
+                {changelog.map(entry => (
+                  <li key={entry.id} className="text-sm text-gray-300 flex items-start gap-2 group">
+                    <span className="shrink-0">•</span>
+                    <span className="flex-1 break-words">{entry.content}</span>
+                    <button
+                      onClick={() => deleteChangelog(entry.id)}
+                      className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition text-xs shrink-0"
+                      title="Delete entry"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
           {CHANGELOG.map((entry, i) => (
             <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-5">
@@ -1491,7 +1503,10 @@ function RequestsPage({ currentUser }: { currentUser: Member }) {
               </div>
               <ul className="space-y-1">
                 {entry.changes.map((c, j) => (
-                  <li key={j} className="text-sm text-gray-300">• {c}</li>
+                  <li key={j} className="text-sm text-gray-300 flex items-start gap-2">
+                    <span className="shrink-0">•</span>
+                    <span className="flex-1 break-words">{c}</span>
+                  </li>
                 ))}
               </ul>
             </div>

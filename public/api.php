@@ -669,5 +669,15 @@ if ($route === '/changelog') {
     }
 }
 
+// Route: /changelog/:id
+if (preg_match('#^/changelog/(\d+)$#', $route, $m)) {
+    $clId = (int)$m[1];
+    if ($method === 'DELETE') {
+        $data['changelog'] = array_values(array_filter($data['changelog'], fn($e) => $e['id'] !== $clId));
+        saveData($data);
+        jsonResponse(['ok' => true]);
+    }
+}
+
 http_response_code(404);
 echo json_encode(['error' => 'Not found']);
