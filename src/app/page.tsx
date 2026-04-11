@@ -6,6 +6,7 @@ type Member = { id: number; name: string; email?: string; avatar?: string; creat
 type Comment = { id: number; idea_id: number; parent_id: number | null; member_id: number; member_name: string; content: string; created_at: string };
 type Notification = { id: number; member_id: number; type: string; message: string; idea_id: number | null; read: boolean; created_at: string };
 type FeatureRequest = { id: number; content: string; submitted_by: number; submitted_by_name: string; status: string; created_at: string };
+type ChangelogEntry = { id: number; content: string; submitted_by: number; submitted_by_name: string; completed_at: string };
 type Vote = { id: number; idea_id: number; member_id: number; member_name: string };
 type Idea = {
   id: number; title: string; description: string; category: string;
@@ -1180,59 +1181,137 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
 
 function Fireworks({ onDone }: { onDone: () => void }) {
   useEffect(() => {
-    const timer = setTimeout(onDone, 2500);
+    const timer = setTimeout(onDone, 3000);
     return () => clearTimeout(timer);
   }, [onDone]);
 
-  const particles = Array.from({ length: 40 }, (_, i) => {
-    const angle = (i / 40) * Math.PI * 2;
-    const velocity = 100 + Math.random() * 150;
+  // Pixel art sprites — drawn as small grids of colored cells
+  const SPRITES = {
+    star: [
+      [0,0,1,0,0],
+      [0,1,1,1,0],
+      [1,1,1,1,1],
+      [0,1,1,1,0],
+      [1,0,1,0,1],
+    ],
+    heart: [
+      [0,1,0,1,0],
+      [1,1,1,1,1],
+      [1,1,1,1,1],
+      [0,1,1,1,0],
+      [0,0,1,0,0],
+    ],
+    gem: [
+      [0,1,1,1,0],
+      [1,1,1,1,1],
+      [1,1,1,1,1],
+      [0,1,1,1,0],
+      [0,0,1,0,0],
+    ],
+    plus: [
+      [0,0,1,0,0],
+      [0,0,1,0,0],
+      [1,1,1,1,1],
+      [0,0,1,0,0],
+      [0,0,1,0,0],
+    ],
+  };
+  const spriteKeys = Object.keys(SPRITES) as (keyof typeof SPRITES)[];
+  const colors = ['#10b981', '#fbbf24', '#f87171', '#60a5fa', '#a78bfa', '#f472b6', '#fb923c'];
+
+  const particles = Array.from({ length: 30 }, (_, i) => {
+    const angle = (i / 30) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+    const velocity = 120 + Math.random() * 180;
     const tx = Math.cos(angle) * velocity;
     const ty = Math.sin(angle) * velocity;
-    const colors = ['#10b981', '#fbbf24', '#f87171', '#60a5fa', '#a78bfa', '#f472b6'];
+    const sprite = SPRITES[spriteKeys[Math.floor(Math.random() * spriteKeys.length)]];
     const color = colors[Math.floor(Math.random() * colors.length)];
-    return { tx, ty, color, delay: Math.random() * 0.3 };
+    return { tx, ty, color, sprite, delay: Math.random() * 0.3, rotate: Math.random() * 360 };
   });
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[100] flex items-center justify-center">
       <style>{`
-        @keyframes firework {
-          0% { transform: translate(0, 0) scale(1); opacity: 1; }
-          100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        @keyframes pixelFirework {
+          0% { transform: translate(0, 0) rotate(0deg) scale(0.5); opacity: 0; }
+          15% { opacity: 1; transform: translate(calc(var(--tx) * 0.15), calc(var(--ty) * 0.15)) rotate(var(--r)) scale(1.2); }
+          80% { opacity: 1; }
+          100% { transform: translate(var(--tx), calc(var(--ty) + 100px)) rotate(calc(var(--r) + 180deg)) scale(0.8); opacity: 0; }
+        }
+        @keyframes centerPop {
+          0% { transform: scale(0); opacity: 0; }
+          30% { transform: scale(1.4); opacity: 1; }
+          60% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(1.2); opacity: 0; }
         }
       `}</style>
       {particles.map((p, i) => (
         <div
           key={i}
-          className="absolute w-3 h-3 rounded-full"
+          className="absolute"
           style={{
-            backgroundColor: p.color,
-            boxShadow: `0 0 10px ${p.color}`,
-            animation: `firework 1.5s ease-out ${p.delay}s forwards`,
+            animation: `pixelFirework 2.2s ease-out ${p.delay}s forwards`,
             // @ts-expect-error css vars
             '--tx': `${p.tx}px`,
             '--ty': `${p.ty}px`,
+            '--r': `${p.rotate}deg`,
+            opacity: 0,
           }}
-        />
+        >
+          <div className="grid grid-cols-5 gap-[1px]" style={{ imageRendering: 'pixelated' }}>
+            {p.sprite.flat().map((cell, j) => (
+              <div
+                key={j}
+                className="w-1.5 h-1.5"
+                style={{
+                  backgroundColor: cell ? p.color : 'transparent',
+                  boxShadow: cell ? `0 0 6px ${p.color}` : 'none',
+                }}
+              />
+            ))}
+          </div>
+        </div>
       ))}
-      <div className="text-6xl animate-bounce">🎉</div>
+      {/* Center pixel art celebration */}
+      <div className="relative" style={{ animation: 'centerPop 1.5s ease-out forwards' }}>
+        <div className="grid grid-cols-7 gap-0" style={{ imageRendering: 'pixelated' }}>
+          {[
+            [0,0,1,1,1,0,0],
+            [0,1,2,2,2,1,0],
+            [1,2,3,3,3,2,1],
+            [1,2,3,4,3,2,1],
+            [1,2,3,3,3,2,1],
+            [0,1,2,2,2,1,0],
+            [0,0,1,1,1,0,0],
+          ].flat().map((cell, i) => {
+            const colors = ['transparent', '#fbbf24', '#f87171', '#10b981', '#fff'];
+            return (
+              <div
+                key={i}
+                className="w-5 h-5"
+                style={{
+                  backgroundColor: colors[cell],
+                  boxShadow: cell ? `0 0 12px ${colors[cell]}` : 'none',
+                }}
+              />
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
 
-function FeatureRequestItem({ request, currentUser, onMarkDone, onSaveEdit, onDelete }: {
-  request: FeatureRequest; currentUser: Member;
+function FeatureRequestItem({ request, onMarkDone, onSaveEdit, onDelete }: {
+  request: FeatureRequest;
   onMarkDone: () => void; onSaveEdit: (text: string) => void; onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(request.content);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const isOwner = currentUser.id === request.submitted_by;
-  const isDone = request.status === 'done';
 
   return (
-    <div className={`bg-gray-900 border rounded-xl p-4 ${isDone ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-gray-800'}`}>
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
       {editing ? (
         <div className="space-y-2">
           <textarea
@@ -1248,26 +1327,23 @@ function FeatureRequestItem({ request, currentUser, onMarkDone, onSaveEdit, onDe
         </div>
       ) : (
         <>
-          <p className={`text-sm whitespace-pre-wrap ${isDone ? 'text-emerald-300 line-through' : 'text-gray-200'}`}>{request.content}</p>
+          <p className="text-sm text-gray-200 whitespace-pre-wrap">{request.content}</p>
           <div className="flex items-center justify-between mt-2 gap-2 flex-wrap">
             <p className="text-xs text-gray-600">
               by <span className="text-gray-500">{request.submitted_by_name}</span> — {formatTimeAgo(request.created_at)}
-              {isDone && <span className="ml-2 text-emerald-400">✓ Done</span>}
             </p>
-            {isOwner && !isDone && (
-              <div className="flex items-center gap-3">
-                <button onClick={() => setEditing(true)} className="text-xs text-gray-600 hover:text-emerald-400 transition">Edit</button>
-                {!confirmDelete ? (
-                  <button onClick={() => setConfirmDelete(true)} className="text-xs text-gray-600 hover:text-red-400 transition">Delete</button>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <button onClick={onDelete} className="text-xs text-red-400 hover:text-red-300 font-medium transition">Confirm</button>
-                    <button onClick={() => setConfirmDelete(false)} className="text-xs text-gray-500 hover:text-gray-300 transition">Cancel</button>
-                  </span>
-                )}
-                <button onClick={onMarkDone} className="text-xs px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-md font-medium hover:bg-emerald-500/30 transition">Done 🎉</button>
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              <button onClick={() => setEditing(true)} className="text-xs text-gray-600 hover:text-emerald-400 transition">Edit</button>
+              {!confirmDelete ? (
+                <button onClick={() => setConfirmDelete(true)} className="text-xs text-gray-600 hover:text-red-400 transition">Delete</button>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <button onClick={onDelete} className="text-xs text-red-400 hover:text-red-300 font-medium transition">Confirm</button>
+                  <button onClick={() => setConfirmDelete(false)} className="text-xs text-gray-500 hover:text-gray-300 transition">Cancel</button>
+                </span>
+              )}
+              <button onClick={onMarkDone} className="text-xs px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-md font-medium hover:bg-emerald-500/30 transition">Mark Done 🎉</button>
+            </div>
           </div>
         </>
       )}
@@ -1278,13 +1354,18 @@ function FeatureRequestItem({ request, currentUser, onMarkDone, onSaveEdit, onDe
 function RequestsPage({ currentUser }: { currentUser: Member }) {
   const [section, setSection] = useState<'request' | 'changelog'>('request');
   const [requests, setRequests] = useState<FeatureRequest[]>([]);
+  const [changelog, setChangelog] = useState<ChangelogEntry[]>([]);
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showFireworks, setShowFireworks] = useState(false);
 
   const load = useCallback(async () => {
-    const data = await api<FeatureRequest[]>('/feature-requests');
-    setRequests(data);
+    const [reqs, cl] = await Promise.all([
+      api<FeatureRequest[]>('/feature-requests'),
+      api<ChangelogEntry[]>('/changelog'),
+    ]);
+    setRequests(reqs);
+    setChangelog(cl);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -1302,11 +1383,8 @@ function RequestsPage({ currentUser }: { currentUser: Member }) {
   };
 
   const markDone = async (id: number) => {
-    await api(`/feature-requests/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status: 'done' }),
-    });
     setShowFireworks(true);
+    await api(`/feature-requests/${id}/done`, { method: 'POST' });
     load();
   };
 
@@ -1374,7 +1452,6 @@ function RequestsPage({ currentUser }: { currentUser: Member }) {
                 <FeatureRequestItem
                   key={r.id}
                   request={r}
-                  currentUser={currentUser}
                   onMarkDone={() => markDone(r.id)}
                   onSaveEdit={(text) => saveEdit(r.id, text)}
                   onDelete={() => deleteRequest(r.id)}
@@ -1386,7 +1463,26 @@ function RequestsPage({ currentUser }: { currentUser: Member }) {
       )}
 
       {section === 'changelog' && (
-        <div className="space-y-4">
+        <div className="space-y-3">
+          {changelog.length > 0 && (
+            <>
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Recently Completed</h3>
+              {changelog.map(entry => (
+                <div key={entry.id} className="bg-gray-900 border border-emerald-500/20 rounded-xl p-4 sm:p-5">
+                  <div className="flex items-start gap-2">
+                    <span className="text-emerald-400 mt-0.5">✓</span>
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-200 whitespace-pre-wrap">{entry.content}</p>
+                      <p className="text-xs text-gray-600 mt-2">
+                        requested by <span className="text-gray-500">{entry.submitted_by_name}</span> — completed {formatTimeAgo(entry.completed_at)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mt-6 mb-2">Version History</h3>
+            </>
+          )}
           {CHANGELOG.map((entry, i) => (
             <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-5">
               <div className="flex items-center gap-2 mb-2">

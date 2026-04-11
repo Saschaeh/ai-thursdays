@@ -19,11 +19,12 @@ $dataFile = $dataDir . '/db.json';
 function loadData() {
     global $dataFile;
     if (!file_exists($dataFile)) {
-        return ['members' => [], 'ideas' => [], 'comments' => [], 'votes' => [], 'notifications' => [], 'feature_requests' => [], 'next_id' => 1];
+        return ['members' => [], 'ideas' => [], 'comments' => [], 'votes' => [], 'notifications' => [], 'feature_requests' => [], 'changelog' => [], 'next_id' => 1];
     }
     $data = json_decode(file_get_contents($dataFile), true);
     if (!isset($data['notifications'])) $data['notifications'] = [];
     if (!isset($data['feature_requests'])) $data['feature_requests'] = [];
+    if (!isset($data['changelog'])) $data['changelog'] = [];
     return $data;
 }
 
@@ -613,10 +614,58 @@ if ($route === '/feature-requests') {
 // Route: /feature-requests/:id
 if (preg_match('#^/feature-requests/(\d+)$#', $route, $m)) {
     $frId = (int)$m[1];
+    if ($method === 'PATCH') {
+        foreach ($data['feature_requests'] as &$fr) {
+            if ($fr['id'] === $frId) {
+                if (array_key_exists('content', $body)) $fr['content'] = trim($body['content']);
+                if (array_key_exists('status', $body)) $fr['status'] = $body['status'];
+                break;
+            }
+        }
+        unset($fr);
+        saveData($data);
+        jsonResponse(['ok' => true]);
+    }
     if ($method === 'DELETE') {
         $data['feature_requests'] = array_values(array_filter($data['feature_requests'], fn($fr) => $fr['id'] !== $frId));
         saveData($data);
         jsonResponse(['ok' => true]);
+    }
+}
+
+// Route: /feature-requests/:id/done (mark done -> move to changelog + delete)
+if (preg_match('#^/feature-requests/(\d+)/done$#', $route, $m)) {
+    $frId = (int)$m[1];
+    if ($method === 'POST') {
+        $found = null;
+        foreach ($data['feature_requests'] as $fr) {
+            if ($fr['id'] === $frId) { $found = $fr; break; }
+        }
+        if (!$found) jsonResponse(['error' => 'Not found'], 404);
+
+        $entry = [
+            'id' => nextId($data),
+            'content' => $found['content'],
+            'submitted_by' => $found['submitted_by'],
+            'completed_at' => date('Y-m-d H:i:s'),
+        ];
+        $data['changelog'][] = $entry;
+        $data['feature_requests'] = array_values(array_filter($data['feature_requests'], fn($fr) => $fr['id'] !== $frId));
+        saveData($data);
+        jsonResponse(['ok' => true]);
+    }
+}
+
+// Route: /changelog
+if ($route === '/changelog') {
+    if ($method === 'GET') {
+        $result = [];
+        foreach ($data['changelog'] as $entry) {
+            $entry['submitted_by_name'] = getMemberName($data['members'], $entry['submitted_by']);
+            $result[] = $entry;
+        }
+        usort($result, fn($a, $b) => strcmp($b['completed_at'], $a['completed_at']));
+        jsonResponse($result);
     }
 }
 
