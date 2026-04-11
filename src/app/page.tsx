@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 type Member = { id: number; name: string; email?: string; avatar?: string; created_at?: string };
 type Comment = { id: number; idea_id: number; parent_id: number | null; member_id: number; member_name: string; content: string; created_at: string };
 type Notification = { id: number; member_id: number; type: string; message: string; idea_id: number | null; read: boolean; created_at: string };
+type FeatureRequest = { id: number; content: string; submitted_by: number; submitted_by_name: string; status: string; created_at: string };
 type Vote = { id: number; idea_id: number; member_id: number; member_name: string };
 type Idea = {
   id: number; title: string; description: string; category: string;
@@ -63,7 +64,7 @@ export default function Home() {
   const [members, setMembers] = useState<Member[]>([]);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [ideas, setIdeas] = useState<Idea[]>([]);
-  const [tab, setTab] = useState<'ideas' | 'diary' | 'profile'>('ideas');
+  const [tab, setTab] = useState<'ideas' | 'diary' | 'requests' | 'profile'>('ideas');
   const [showNewIdea, setShowNewIdea] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   const [nameInput, setNameInput] = useState('');
@@ -341,9 +342,6 @@ export default function Home() {
                 </div>
               )}
             </div>
-            <button onClick={handleLogout} className="text-xs text-gray-500 hover:text-gray-300 transition">
-              Switch user
-            </button>
           </div>
         </div>
       </header>
@@ -365,6 +363,14 @@ export default function Home() {
             }`}
           >
             Diary / Schedule
+          </button>
+          <button
+            onClick={() => setTab('requests')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              tab === 'requests' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+            }`}
+          >
+            Requests
           </button>
           <button
             onClick={() => setTab('profile')}
@@ -444,11 +450,16 @@ export default function Home() {
           }} />
         )}
 
+        {tab === 'requests' && (
+          <RequestsPage currentUser={currentUser} />
+        )}
+
         {tab === 'profile' && (
           <ProfilePage
             currentUser={currentUser}
             members={members}
             ideas={ideas}
+            onLogout={handleLogout}
             onUpdate={(updated) => {
               setCurrentUser(updated);
               localStorage.setItem('ai-thursdays-user', JSON.stringify(updated));
@@ -1031,9 +1042,10 @@ const AVATAR_NAMES: Record<string, string> = {
   'masterchief.svg': 'Master Chief', 'pacman.svg': 'Pac-Man', 'mushroom.svg': 'Mushroom', 'dragon.svg': 'Dragon',
 };
 
-function ProfilePage({ currentUser, members, ideas, onUpdate }: {
+function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
   currentUser: Member; members: Member[]; ideas: Idea[];
   onUpdate: (member: Member) => void;
+  onLogout: () => void;
 }) {
   const [name, setName] = useState(currentUser.name);
   const [email, setEmail] = useState(currentUser.email || '');
@@ -1154,9 +1166,164 @@ function ProfilePage({ currentUser, members, ideas, onUpdate }: {
           </div>
         </div>
       )}
+
+      <div className="mt-6 text-center">
+        <button onClick={onLogout} className="text-sm text-gray-500 hover:text-red-400 transition">
+          Log out / Switch user
+        </button>
+      </div>
     </div>
   );
 }
+
+function RequestsPage({ currentUser }: { currentUser: Member }) {
+  const [section, setSection] = useState<'request' | 'changelog'>('request');
+  const [requests, setRequests] = useState<FeatureRequest[]>([]);
+  const [content, setContent] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = useCallback(async () => {
+    const data = await api<FeatureRequest[]>('/feature-requests');
+    setRequests(data);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const submit = async () => {
+    if (!content.trim()) return;
+    setSubmitting(true);
+    await api('/feature-requests', {
+      method: 'POST',
+      body: JSON.stringify({ content: content.trim(), submitted_by: currentUser.id }),
+    });
+    setContent('');
+    setSubmitting(false);
+    load();
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto">
+      <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit mb-5">
+        <button
+          onClick={() => setSection('request')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+            section === 'request' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+          }`}
+        >
+          Request Feature
+        </button>
+        <button
+          onClick={() => setSection('changelog')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+            section === 'changelog' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+          }`}
+        >
+          Change Log
+        </button>
+      </div>
+
+      {section === 'request' && (
+        <div>
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5 mb-5">
+            <h3 className="font-semibold text-white mb-3">Request a new feature</h3>
+            <textarea
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              placeholder="Describe the feature you'd like to see..."
+              rows={4}
+              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition resize-none"
+            />
+            <button
+              onClick={submit}
+              disabled={submitting || !content.trim()}
+              className="px-5 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 text-sm font-medium transition disabled:opacity-50"
+            >
+              {submitting ? 'Submitting...' : 'Submit Request'}
+            </button>
+          </div>
+
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">All Requests</h3>
+          <div className="space-y-2">
+            {requests.length === 0 ? (
+              <p className="text-sm text-gray-600">No feature requests yet. Be the first!</p>
+            ) : (
+              requests.map(r => (
+                <div key={r.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                  <p className="text-sm text-gray-200 whitespace-pre-wrap">{r.content}</p>
+                  <p className="text-xs text-gray-600 mt-2">
+                    by <span className="text-gray-500">{r.submitted_by_name}</span> — {formatTimeAgo(r.created_at)}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {section === 'changelog' && (
+        <div className="space-y-4">
+          {CHANGELOG.map((entry, i) => (
+            <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-semibold text-emerald-400">{entry.version}</span>
+                <span className="text-xs text-gray-600">{entry.date}</span>
+              </div>
+              <ul className="space-y-1">
+                {entry.changes.map((c, j) => (
+                  <li key={j} className="text-sm text-gray-300">• {c}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const CHANGELOG = [
+  {
+    version: 'v1.5',
+    date: '2026-04-11',
+    changes: [
+      'Added Requests tab with feature requests and change log',
+      'New 90s cult film pixel art avatars',
+      'Removed switch user from header (now in profile)',
+    ],
+  },
+  {
+    version: 'v1.4',
+    date: '2026-04-10',
+    changes: [
+      'Mobile layout fixes — no more horizontal overflow',
+      '25+ pixel art avatars with avatar picker on profile',
+      'Resource links on ideas (up to 3 URLs)',
+      'Clickable calendar entries and upcoming list',
+      'OG meta tags for link previews',
+    ],
+  },
+  {
+    version: 'v1.3',
+    date: '2026-04-09',
+    changes: [
+      'Email notifications via Brevo SMTP (pure PHP sockets)',
+      'In-app notification center with bell icon',
+      'Comment edit and delete',
+      'Profile page with editable name, email, avatar',
+      'Ideas sorted by upvotes',
+    ],
+  },
+  {
+    version: 'v1.2',
+    date: '2026-04-08',
+    changes: [
+      'Moon background image',
+      'Reddit-style threaded comments',
+      'Multi-assign, delete ideas, calendar diary view',
+      'Honeypot bot protection',
+    ],
+  },
+];
 
 function CalendarView({ ideas, onSelectIdea }: { ideas: Idea[]; onSelectIdea: (id: number) => void }) {
   const [currentMonth, setCurrentMonth] = useState(() => {

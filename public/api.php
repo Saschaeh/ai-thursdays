@@ -19,10 +19,11 @@ $dataFile = $dataDir . '/db.json';
 function loadData() {
     global $dataFile;
     if (!file_exists($dataFile)) {
-        return ['members' => [], 'ideas' => [], 'comments' => [], 'votes' => [], 'notifications' => [], 'next_id' => 1];
+        return ['members' => [], 'ideas' => [], 'comments' => [], 'votes' => [], 'notifications' => [], 'feature_requests' => [], 'next_id' => 1];
     }
     $data = json_decode(file_get_contents($dataFile), true);
     if (!isset($data['notifications'])) $data['notifications'] = [];
+    if (!isset($data['feature_requests'])) $data['feature_requests'] = [];
     return $data;
 }
 
@@ -577,6 +578,44 @@ if (preg_match('#^/members/(\d+)$#', $route, $m)) {
         foreach ($data['members'] as $member) {
             if ($member['id'] === $mId) jsonResponse($member);
         }
+        jsonResponse(['ok' => true]);
+    }
+}
+
+// Route: /feature-requests
+if ($route === '/feature-requests') {
+    if ($method === 'GET') {
+        $result = [];
+        foreach ($data['feature_requests'] as $fr) {
+            $fr['submitted_by_name'] = getMemberName($data['members'], $fr['submitted_by']);
+            $result[] = $fr;
+        }
+        usort($result, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+        jsonResponse($result);
+    }
+    if ($method === 'POST') {
+        $content = trim($body['content'] ?? '');
+        if (!$content) jsonResponse(['error' => 'Content is required'], 400);
+        $fr = [
+            'id' => nextId($data),
+            'content' => $content,
+            'submitted_by' => (int)($body['submitted_by'] ?? 0),
+            'status' => 'open',
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
+        $data['feature_requests'][] = $fr;
+        saveData($data);
+        $fr['submitted_by_name'] = getMemberName($data['members'], $fr['submitted_by']);
+        jsonResponse($fr);
+    }
+}
+
+// Route: /feature-requests/:id
+if (preg_match('#^/feature-requests/(\d+)$#', $route, $m)) {
+    $frId = (int)$m[1];
+    if ($method === 'DELETE') {
+        $data['feature_requests'] = array_values(array_filter($data['feature_requests'], fn($fr) => $fr['id'] !== $frId));
+        saveData($data);
         jsonResponse(['ok' => true]);
     }
 }
