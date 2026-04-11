@@ -1031,6 +1031,7 @@ const AVAILABLE_AVATARS = [
   'cat.svg', 'skull.svg', 'phoenix.svg', 'ghost.svg', 'crown.svg',
   'doggie.svg', 'vader.svg', 'link.svg', 'doomguy.svg', 'mario.svg',
   'sonic.svg', 'masterchief.svg', 'pacman.svg', 'mushroom.svg', 'dragon.svg',
+  'neo.svg', 'lebowski.svg', 'terminator.svg', 'leloo.svg', 'vincent.svg',
 ];
 
 const AVATAR_NAMES: Record<string, string> = {
@@ -1040,6 +1041,7 @@ const AVATAR_NAMES: Record<string, string> = {
   'ghost.svg': 'Ghost', 'crown.svg': 'Crown', 'doggie.svg': 'Doggie', 'vader.svg': 'Darth Vader',
   'link.svg': 'Link', 'doomguy.svg': 'Doom Guy', 'mario.svg': 'Mario', 'sonic.svg': 'Sonic',
   'masterchief.svg': 'Master Chief', 'pacman.svg': 'Pac-Man', 'mushroom.svg': 'Mushroom', 'dragon.svg': 'Dragon',
+  'neo.svg': 'Neo', 'lebowski.svg': 'The Dude', 'terminator.svg': 'Terminator', 'leloo.svg': 'Leeloo', 'vincent.svg': 'Vincent Vega',
 };
 
 function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
@@ -1176,11 +1178,109 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
   );
 }
 
+function Fireworks({ onDone }: { onDone: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onDone, 2500);
+    return () => clearTimeout(timer);
+  }, [onDone]);
+
+  const particles = Array.from({ length: 40 }, (_, i) => {
+    const angle = (i / 40) * Math.PI * 2;
+    const velocity = 100 + Math.random() * 150;
+    const tx = Math.cos(angle) * velocity;
+    const ty = Math.sin(angle) * velocity;
+    const colors = ['#10b981', '#fbbf24', '#f87171', '#60a5fa', '#a78bfa', '#f472b6'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    return { tx, ty, color, delay: Math.random() * 0.3 };
+  });
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[100] flex items-center justify-center">
+      <style>{`
+        @keyframes firework {
+          0% { transform: translate(0, 0) scale(1); opacity: 1; }
+          100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+        }
+      `}</style>
+      {particles.map((p, i) => (
+        <div
+          key={i}
+          className="absolute w-3 h-3 rounded-full"
+          style={{
+            backgroundColor: p.color,
+            boxShadow: `0 0 10px ${p.color}`,
+            animation: `firework 1.5s ease-out ${p.delay}s forwards`,
+            // @ts-expect-error css vars
+            '--tx': `${p.tx}px`,
+            '--ty': `${p.ty}px`,
+          }}
+        />
+      ))}
+      <div className="text-6xl animate-bounce">🎉</div>
+    </div>
+  );
+}
+
+function FeatureRequestItem({ request, currentUser, onMarkDone, onSaveEdit, onDelete }: {
+  request: FeatureRequest; currentUser: Member;
+  onMarkDone: () => void; onSaveEdit: (text: string) => void; onDelete: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(request.content);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const isOwner = currentUser.id === request.submitted_by;
+  const isDone = request.status === 'done';
+
+  return (
+    <div className={`bg-gray-900 border rounded-xl p-4 ${isDone ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-gray-800'}`}>
+      {editing ? (
+        <div className="space-y-2">
+          <textarea
+            value={editText}
+            onChange={e => setEditText(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition resize-none"
+          />
+          <div className="flex gap-2">
+            <button onClick={() => { onSaveEdit(editText); setEditing(false); }} className="px-3 py-1 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-400 transition">Save</button>
+            <button onClick={() => { setEditing(false); setEditText(request.content); }} className="px-3 py-1 text-gray-400 text-xs hover:text-gray-200 transition">Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className={`text-sm whitespace-pre-wrap ${isDone ? 'text-emerald-300 line-through' : 'text-gray-200'}`}>{request.content}</p>
+          <div className="flex items-center justify-between mt-2 gap-2 flex-wrap">
+            <p className="text-xs text-gray-600">
+              by <span className="text-gray-500">{request.submitted_by_name}</span> — {formatTimeAgo(request.created_at)}
+              {isDone && <span className="ml-2 text-emerald-400">✓ Done</span>}
+            </p>
+            {isOwner && !isDone && (
+              <div className="flex items-center gap-3">
+                <button onClick={() => setEditing(true)} className="text-xs text-gray-600 hover:text-emerald-400 transition">Edit</button>
+                {!confirmDelete ? (
+                  <button onClick={() => setConfirmDelete(true)} className="text-xs text-gray-600 hover:text-red-400 transition">Delete</button>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <button onClick={onDelete} className="text-xs text-red-400 hover:text-red-300 font-medium transition">Confirm</button>
+                    <button onClick={() => setConfirmDelete(false)} className="text-xs text-gray-500 hover:text-gray-300 transition">Cancel</button>
+                  </span>
+                )}
+                <button onClick={onMarkDone} className="text-xs px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-md font-medium hover:bg-emerald-500/30 transition">Done 🎉</button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function RequestsPage({ currentUser }: { currentUser: Member }) {
   const [section, setSection] = useState<'request' | 'changelog'>('request');
   const [requests, setRequests] = useState<FeatureRequest[]>([]);
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showFireworks, setShowFireworks] = useState(false);
 
   const load = useCallback(async () => {
     const data = await api<FeatureRequest[]>('/feature-requests');
@@ -1201,8 +1301,31 @@ function RequestsPage({ currentUser }: { currentUser: Member }) {
     load();
   };
 
+  const markDone = async (id: number) => {
+    await api(`/feature-requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'done' }),
+    });
+    setShowFireworks(true);
+    load();
+  };
+
+  const saveEdit = async (id: number, newContent: string) => {
+    await api(`/feature-requests/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ content: newContent }),
+    });
+    load();
+  };
+
+  const deleteRequest = async (id: number) => {
+    await api(`/feature-requests/${id}`, { method: 'DELETE' });
+    load();
+  };
+
   return (
     <div className="max-w-2xl mx-auto">
+      {showFireworks && <Fireworks onDone={() => setShowFireworks(false)} />}
       <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit mb-5">
         <button
           onClick={() => setSection('request')}
@@ -1248,12 +1371,14 @@ function RequestsPage({ currentUser }: { currentUser: Member }) {
               <p className="text-sm text-gray-600">No feature requests yet. Be the first!</p>
             ) : (
               requests.map(r => (
-                <div key={r.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                  <p className="text-sm text-gray-200 whitespace-pre-wrap">{r.content}</p>
-                  <p className="text-xs text-gray-600 mt-2">
-                    by <span className="text-gray-500">{r.submitted_by_name}</span> — {formatTimeAgo(r.created_at)}
-                  </p>
-                </div>
+                <FeatureRequestItem
+                  key={r.id}
+                  request={r}
+                  currentUser={currentUser}
+                  onMarkDone={() => markDone(r.id)}
+                  onSaveEdit={(text) => saveEdit(r.id, text)}
+                  onDelete={() => deleteRequest(r.id)}
+                />
               ))
             )}
           </div>
