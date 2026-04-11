@@ -1382,6 +1382,7 @@ function RequestsPage({ currentUser }: { currentUser: Member }) {
     });
     setContent('');
     setSubmitting(false);
+    setShowFireworks(true);
     load();
   };
 
