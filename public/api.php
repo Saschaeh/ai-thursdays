@@ -729,6 +729,26 @@ if ($route === '/resources') {
 // Route: /resources/:id
 if (preg_match('#^/resources/(\d+)$#', $route, $m)) {
     $rId = (int)$m[1];
+    if ($method === 'PATCH') {
+        foreach ($data['resources'] as &$r) {
+            if ($r['id'] === $rId) {
+                if (array_key_exists('title', $body) && trim($body['title'])) $r['title'] = trim($body['title']);
+                if (array_key_exists('description', $body)) $r['description'] = trim($body['description']);
+                if (array_key_exists('url', $body) && trim($body['url'])) $r['url'] = trim($body['url']);
+                if (array_key_exists('archived', $body)) $r['archived'] = (bool)$body['archived'];
+                break;
+            }
+        }
+        unset($r);
+        saveData($data);
+        foreach ($data['resources'] as $r) {
+            if ($r['id'] === $rId) {
+                $r['submitted_by_name'] = getMemberName($data['members'], $r['submitted_by']);
+                jsonResponse($r);
+            }
+        }
+        jsonResponse(['error' => 'Not found'], 404);
+    }
     if ($method === 'DELETE') {
         $data['resources'] = array_values(array_filter($data['resources'], fn($r) => $r['id'] !== $rId));
         saveData($data);

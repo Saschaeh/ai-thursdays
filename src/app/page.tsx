@@ -9,7 +9,7 @@ type FeatureRequest = { id: number; content: string; submitted_by: number; submi
 type ChangelogEntry = { id: number; content: string; submitted_by: number; submitted_by_name: string; completed_at: string };
 type Vote = { id: number; idea_id: number; member_id: number; member_name: string };
 type Board = 'research' | 'commercial';
-type Resource = { id: number; title: string; description: string; url: string; submitted_by: number; submitted_by_name: string; created_at: string };
+type Resource = { id: number; title: string; description: string; url: string; submitted_by: number; submitted_by_name: string; archived?: boolean; created_at: string };
 type Idea = {
   id: number; title: string; description: string; category: string;
   board: Board;
@@ -1486,6 +1486,7 @@ function FeatureRequestItem({ request, onMarkDone, onSaveEdit, onDelete }: {
 function ResourcesPage({ currentUser, members }: { currentUser: Member; members: Member[] }) {
   const [resources, setResources] = useState<Resource[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [url, setUrl] = useState('');
@@ -1511,25 +1512,39 @@ function ResourcesPage({ currentUser, members }: { currentUser: Member; members:
     load();
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Delete this resource?')) return;
-    await api(`/resources/${id}`, { method: 'DELETE' });
-    load();
-  };
+  const activeResources = resources.filter(r => !r.archived);
+  const archivedResources = resources.filter(r => r.archived);
+  const visible = showArchived ? archivedResources : activeResources;
 
   return (
     <>
       <div className="flex justify-between items-center mb-5">
-        <p className="text-gray-500 text-sm">{resources.length} resource{resources.length !== 1 ? 's' : ''}</p>
-        <button
-          onClick={() => setShowForm(s => !s)}
-          className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 text-sm font-medium transition"
-        >
-          {showForm ? 'Cancel' : '+ New Resource'}
-        </button>
+        <div className="flex items-center gap-3 text-sm">
+          <button
+            onClick={() => setShowArchived(false)}
+            className={`transition ${!showArchived ? 'text-gray-300 font-medium' : 'text-gray-500 hover:text-gray-300'}`}
+          >
+            {activeResources.length} resource{activeResources.length !== 1 ? 's' : ''}
+          </button>
+          <span className="text-gray-700">|</span>
+          <button
+            onClick={() => setShowArchived(true)}
+            className={`transition ${showArchived ? 'text-gray-300 font-medium' : 'text-gray-500 hover:text-gray-300'}`}
+          >
+            Archived
+          </button>
+        </div>
+        {!showArchived && (
+          <button
+            onClick={() => setShowForm(s => !s)}
+            className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 text-sm font-medium transition"
+          >
+            {showForm ? 'Cancel' : '+ New Resource'}
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {showForm && !showArchived && (
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-5">
           <h3 className="font-semibold text-white mb-4">New Resource</h3>
           <input
@@ -1565,58 +1580,152 @@ function ResourcesPage({ currentUser, members }: { currentUser: Member; members:
       )}
 
       <div className="grid gap-3">
-        {resources.map(r => {
-          const submitter = members.find(m => m.id === r.submitted_by);
-          return (
-            <div key={r.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5 hover:border-gray-700 transition">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <a
-                    href={r.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-semibold text-white hover:text-emerald-400 transition break-words"
-                  >
-                    {r.title}
-                  </a>
-                  {r.description && (
-                    <p className="text-sm text-gray-400 mt-1 leading-relaxed break-words">{r.description}</p>
-                  )}
-                  <a
-                    href={r.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-emerald-400/80 hover:text-emerald-400 mt-2 inline-block break-all"
-                  >
-                    {r.url}
-                  </a>
-                  <div className="flex items-center gap-2 mt-3 text-xs text-gray-500 flex-wrap">
-                    <Avatar member={submitter || { name: r.submitted_by_name || '?' }} size="sm" />
-                    <span className="text-gray-400">{r.submitted_by_name}</span>
-                    <span>·</span>
-                    <span>{formatTimeAgo(r.created_at)}</span>
-                  </div>
-                </div>
-                {r.submitted_by === currentUser.id && (
-                  <button
-                    onClick={() => handleDelete(r.id)}
-                    className="text-gray-600 hover:text-red-400 transition text-sm shrink-0"
-                    title="Delete"
-                  >
-                    &times;
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {resources.length === 0 && (
+        {visible.map(r => (
+          <ResourceCard
+            key={r.id}
+            resource={r}
+            members={members}
+            currentUser={currentUser}
+            onChanged={load}
+          />
+        ))}
+        {visible.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-600 text-sm">No resources yet. Share a link or presentation!</p>
+            <p className="text-gray-600 text-sm">{showArchived ? 'No archived resources.' : 'No resources yet. Share a link or presentation!'}</p>
           </div>
         )}
       </div>
     </>
+  );
+}
+
+function ResourceCard({ resource, members, currentUser, onChanged }: {
+  resource: Resource; members: Member[]; currentUser: Member; onChanged: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(resource.title);
+  const [description, setDescription] = useState(resource.description);
+  const [url, setUrl] = useState(resource.url);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const submitter = members.find(m => m.id === resource.submitted_by);
+  const isOwner = resource.submitted_by === currentUser.id;
+
+  const handleSave = async () => {
+    if (!title.trim() || !url.trim()) return;
+    await api(`/resources/${resource.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title: title.trim(), description: description.trim(), url: url.trim() }),
+    });
+    setEditing(false);
+    onChanged();
+  };
+
+  const handleCancel = () => {
+    setTitle(resource.title);
+    setDescription(resource.description);
+    setUrl(resource.url);
+    setEditing(false);
+  };
+
+  const handleArchive = async () => {
+    await api(`/resources/${resource.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ archived: !resource.archived }),
+    });
+    onChanged();
+  };
+
+  const handleDelete = async () => {
+    await api(`/resources/${resource.id}`, { method: 'DELETE' });
+    onChanged();
+  };
+
+  if (editing) {
+    return (
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5">
+        <input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="Title"
+          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+        />
+        <textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="Description (optional)"
+          rows={2}
+          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition resize-none"
+        />
+        <input
+          value={url}
+          onChange={e => setUrl(e.target.value)}
+          placeholder="https://..."
+          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+        />
+        <div className="flex justify-end gap-2">
+          <button onClick={handleCancel} className="px-4 py-1.5 text-gray-400 hover:text-gray-200 text-sm transition">Cancel</button>
+          <button
+            onClick={handleSave}
+            disabled={!title.trim() || !url.trim()}
+            className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-400 transition disabled:opacity-50"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5 hover:border-gray-700 transition">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <a
+            href={resource.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-white hover:text-emerald-400 transition break-words"
+          >
+            {resource.title}
+          </a>
+          {resource.description && (
+            <p className="text-sm text-gray-400 mt-1 leading-relaxed break-words">{resource.description}</p>
+          )}
+          <a
+            href={resource.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-emerald-400/80 hover:text-emerald-400 mt-2 inline-block break-all"
+          >
+            {resource.url}
+          </a>
+          <div className="flex items-center gap-2 mt-3 text-xs text-gray-500 flex-wrap">
+            <Avatar member={submitter || { name: resource.submitted_by_name || '?' }} size="sm" />
+            <span className="text-gray-400">{resource.submitted_by_name}</span>
+            <span>·</span>
+            <span>{formatTimeAgo(resource.created_at)}</span>
+            {isOwner && !confirmDelete && (
+              <>
+                <span>·</span>
+                <button onClick={() => setEditing(true)} className="text-gray-500 hover:text-emerald-400 transition">Edit</button>
+                <button onClick={handleArchive} className="text-gray-500 hover:text-emerald-400 transition">
+                  {resource.archived ? 'Unarchive' : 'Archive'}
+                </button>
+                <button onClick={() => setConfirmDelete(true)} className="text-gray-500 hover:text-red-400 transition">Delete</button>
+              </>
+            )}
+            {isOwner && confirmDelete && (
+              <>
+                <span>·</span>
+                <span className="text-red-400">Delete?</span>
+                <button onClick={handleDelete} className="text-red-400 hover:text-red-300 transition">Yes</button>
+                <button onClick={() => setConfirmDelete(false)} className="text-gray-500 hover:text-gray-300 transition">No</button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
