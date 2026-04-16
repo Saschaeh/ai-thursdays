@@ -1200,9 +1200,9 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
   const otherMembers = members.filter(m => m.id !== currentUser.id).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
+    <div>
     <div className="grid md:grid-cols-[minmax(0,1fr)_320px] gap-5 items-stretch">
-      <div className="flex flex-col">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 mb-5 flex-1">
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6">
         <div className="flex items-center gap-4 mb-6">
           <Avatar member={{ ...currentUser, avatar: selectedAvatar }} size="lg" />
           <div>
@@ -1271,13 +1271,6 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
         </div>
       </div>
 
-      <div className="mt-6 text-center">
-        <button onClick={onLogout} className="text-sm text-gray-500 hover:text-red-400 transition">
-          Log out / Switch user
-        </button>
-      </div>
-      </div>
-
       <div className="flex flex-col gap-5">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">Your Stats</h3>
@@ -1332,6 +1325,12 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
           </div>
         </div>
       </div>
+    </div>
+    <div className="mt-6 text-center">
+      <button onClick={onLogout} className="text-sm text-gray-500 hover:text-red-400 transition">
+        Log out / Switch user
+      </button>
+    </div>
     </div>
   );
 }
