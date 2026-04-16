@@ -2065,7 +2065,7 @@ function CalendarView({ ideas, onSelectIdea }: { ideas: Idea[]; onSelectIdea: (i
   const ideaByDate = useMemo(() => {
     const map: Record<string, Idea[]> = {};
     for (const idea of ideas) {
-      if (idea.target_date && !idea.archived) {
+      if (idea.target_date) {
         const key = idea.target_date;
         if (!map[key]) map[key] = [];
         map[key].push(idea);
@@ -2146,7 +2146,7 @@ function CalendarView({ ideas, onSelectIdea }: { ideas: Idea[]; onSelectIdea: (i
       {/* Legend / upcoming list */}
       <div className="mt-6 space-y-3">
         <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Upcoming Presentations</h3>
-        {ideas.filter(i => i.target_date && !i.archived && (i.status === 'assigned' || i.status === 'in-progress')).sort((a, b) => (a.target_date ?? '').localeCompare(b.target_date ?? '')).map(idea => (
+        {ideas.filter(i => i.target_date && (i.status === 'assigned' || i.status === 'in-progress')).sort((a, b) => (a.target_date ?? '').localeCompare(b.target_date ?? '')).map(idea => (
           <div key={idea.id} onClick={() => onSelectIdea(idea.id)} className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-gray-700 transition">
             <div>
               <h4 className="font-medium text-white text-sm">{idea.title}</h4>
@@ -2159,7 +2159,7 @@ function CalendarView({ ideas, onSelectIdea }: { ideas: Idea[]; onSelectIdea: (i
             </span>
           </div>
         ))}
-        {ideas.filter(i => i.target_date && !i.archived && (i.status === 'assigned' || i.status === 'in-progress')).length === 0 && (
+        {ideas.filter(i => i.target_date && (i.status === 'assigned' || i.status === 'in-progress')).length === 0 && (
           <p className="text-sm text-gray-600">No upcoming presentations scheduled.</p>
         )}
       </div>
