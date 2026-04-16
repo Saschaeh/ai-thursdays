@@ -1278,7 +1278,7 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
       </div>
       </div>
 
-      <div className="space-y-5">
+      <div className="flex flex-col gap-5">
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">Your Stats</h3>
           <div className="grid grid-cols-2 gap-3">
@@ -1317,7 +1317,7 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
           </div>
         )}
 
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex-1">
           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">The Squad</h3>
           <div className="space-y-3">
             {otherMembers.map(m => (
@@ -1516,10 +1516,12 @@ function ResourcesPage({ currentUser, members }: { currentUser: Member; members:
   const [description, setDescription] = useState('');
   const [url, setUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
 
   const load = useCallback(async () => {
     const data = await api<Resource[]>('/resources');
     setResources(data);
+    setSelectedResource(prev => prev ? data.find(r => r.id === prev.id) ?? null : null);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -1534,6 +1536,12 @@ function ResourcesPage({ currentUser, members }: { currentUser: Member; members:
     setTitle(''); setDescription(''); setUrl('');
     setShowForm(false);
     setSubmitting(false);
+    load();
+  };
+
+  const handleDelete = async (id: number) => {
+    await api(`/resources/${id}`, { method: 'DELETE' });
+    setSelectedResource(null);
     load();
   };
 
@@ -1556,7 +1564,7 @@ function ResourcesPage({ currentUser, members }: { currentUser: Member; members:
             onClick={() => setShowArchived(true)}
             className={`transition ${showArchived ? 'text-gray-300 font-medium' : 'text-gray-500 hover:text-gray-300'}`}
           >
-            Archived
+            {archivedResources.length} archived
           </button>
         </div>
         {!showArchived && (
@@ -1610,8 +1618,7 @@ function ResourcesPage({ currentUser, members }: { currentUser: Member; members:
             key={r.id}
             resource={r}
             members={members}
-            currentUser={currentUser}
-            onChanged={load}
+            onSelect={() => setSelectedResource(r)}
           />
         ))}
         {visible.length === 0 && (
@@ -1620,20 +1627,58 @@ function ResourcesPage({ currentUser, members }: { currentUser: Member; members:
           </div>
         )}
       </div>
+
+      {selectedResource && (
+        <ResourceDetail
+          resource={selectedResource}
+          currentUser={currentUser}
+          members={members}
+          onClose={() => setSelectedResource(null)}
+          onUpdate={load}
+          onDelete={() => handleDelete(selectedResource.id)}
+        />
+      )}
     </>
   );
 }
 
-function ResourceCard({ resource, members, currentUser, onChanged }: {
-  resource: Resource; members: Member[]; currentUser: Member; onChanged: () => void;
+function ResourceCard({ resource, members, onSelect }: {
+  resource: Resource; members: Member[]; onSelect: () => void;
+}) {
+  const submitter = members.find(m => m.id === resource.submitted_by);
+  return (
+    <div
+      className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5 hover:border-gray-700 transition cursor-pointer group overflow-hidden"
+      onClick={onSelect}
+    >
+      <div className="flex-1 min-w-0">
+        <h3 className="font-semibold text-white group-hover:text-emerald-400 transition break-words">{resource.title}</h3>
+        {resource.description && (
+          <p className="text-sm text-gray-400 line-clamp-2 mt-1 leading-relaxed break-words">{resource.description}</p>
+        )}
+        <p className="text-xs text-emerald-400/70 mt-2 truncate">{resource.url}</p>
+        <div className="flex items-center gap-2 mt-3 text-xs text-gray-500 flex-wrap">
+          <Avatar member={submitter || { name: resource.submitted_by_name || '?' }} size="sm" />
+          <span className="text-gray-400">{resource.submitted_by_name}</span>
+          <span>·</span>
+          <span>{formatTimeAgo(resource.created_at)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResourceDetail({ resource, currentUser, members, onClose, onUpdate, onDelete }: {
+  resource: Resource; currentUser: Member; members: Member[];
+  onClose: () => void; onUpdate: () => void; onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(resource.title);
   const [description, setDescription] = useState(resource.description);
   const [url, setUrl] = useState(resource.url);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const submitter = members.find(m => m.id === resource.submitted_by);
   const isOwner = resource.submitted_by === currentUser.id;
+  const submitter = members.find(m => m.id === resource.submitted_by);
 
   const handleSave = async () => {
     if (!title.trim() || !url.trim()) return;
@@ -1642,10 +1687,10 @@ function ResourceCard({ resource, members, currentUser, onChanged }: {
       body: JSON.stringify({ title: title.trim(), description: description.trim(), url: url.trim() }),
     });
     setEditing(false);
-    onChanged();
+    onUpdate();
   };
 
-  const handleCancel = () => {
+  const handleCancelEdit = () => {
     setTitle(resource.title);
     setDescription(resource.description);
     setUrl(resource.url);
@@ -1657,97 +1702,121 @@ function ResourceCard({ resource, members, currentUser, onChanged }: {
       method: 'PATCH',
       body: JSON.stringify({ archived: !resource.archived }),
     });
-    onChanged();
+    onUpdate();
+    onClose();
   };
-
-  const handleDelete = async () => {
-    await api(`/resources/${resource.id}`, { method: 'DELETE' });
-    onChanged();
-  };
-
-  if (editing) {
-    return (
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5">
-        <input
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          placeholder="Title"
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
-        />
-        <textarea
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder="Description (optional)"
-          rows={2}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition resize-none"
-        />
-        <input
-          value={url}
-          onChange={e => setUrl(e.target.value)}
-          placeholder="https://..."
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
-        />
-        <div className="flex justify-end gap-2">
-          <button onClick={handleCancel} className="px-4 py-1.5 text-gray-400 hover:text-gray-200 text-sm transition">Cancel</button>
-          <button
-            onClick={handleSave}
-            disabled={!title.trim() || !url.trim()}
-            className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-400 transition disabled:opacity-50"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-5 hover:border-gray-700 transition">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <a
-            href={resource.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-semibold text-white hover:text-emerald-400 transition break-words"
-          >
-            {resource.title}
-          </a>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4" onClick={onClose}>
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-4 sm:p-6">
+          <div className="flex justify-between items-start mb-5">
+            <div className="flex items-start gap-4">
+              <Avatar member={submitter || { name: resource.submitted_by_name || '?' }} size="ml" />
+              <div>
+                <h2 className="text-xl font-semibold text-white break-words">{resource.title}</h2>
+                <div className="flex items-center gap-2 mt-2 flex-wrap text-xs text-gray-500">
+                  <span>by <span className="text-gray-400">{resource.submitted_by_name}</span></span>
+                  <span>·</span>
+                  <span>{formatTimeAgo(resource.created_at)}</span>
+                </div>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-2xl leading-none transition">&times;</button>
+          </div>
+
           {resource.description && (
-            <p className="text-sm text-gray-400 mt-1 leading-relaxed break-words">{resource.description}</p>
+            <p className="text-gray-300 mb-3 whitespace-pre-wrap leading-relaxed">{resource.description}</p>
           )}
+
           <a
             href={resource.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-emerald-400/80 hover:text-emerald-400 mt-2 inline-block break-all"
+            className="flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 transition mb-5 break-all"
           >
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
             {resource.url}
           </a>
-          <div className="flex items-center gap-2 mt-3 text-xs text-gray-500 flex-wrap">
-            <Avatar member={submitter || { name: resource.submitted_by_name || '?' }} size="sm" />
-            <span className="text-gray-400">{resource.submitted_by_name}</span>
-            <span>·</span>
-            <span>{formatTimeAgo(resource.created_at)}</span>
-            {isOwner && !confirmDelete && (
-              <>
-                <span>·</span>
-                <button onClick={() => setEditing(true)} className="text-gray-500 hover:text-emerald-400 transition">Edit</button>
-                <button onClick={handleArchive} className="text-gray-500 hover:text-emerald-400 transition">
-                  {resource.archived ? 'Unarchive' : 'Archive'}
+
+          {isOwner && (
+            <div className="border border-gray-800 rounded-xl p-4 mb-5 bg-gray-800/50">
+              {!editing ? (
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-400">Edit resource details</div>
+                  <button onClick={() => setEditing(true)} className="text-sm text-emerald-400 hover:text-emerald-300 transition">Edit</button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Title</p>
+                    <input
+                      value={title}
+                      onChange={e => setTitle(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">Description</p>
+                    <textarea
+                      value={description}
+                      onChange={e => setDescription(e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition resize-none"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 mb-2">URL</p>
+                    <input
+                      value={url}
+                      onChange={e => setUrl(e.target.value)}
+                      placeholder="https://..."
+                      className="w-full px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleSave} disabled={!title.trim() || !url.trim()} className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-400 transition disabled:opacity-50">Save</button>
+                    <button onClick={handleCancelEdit} className="px-4 py-1.5 text-gray-400 hover:text-gray-200 text-sm transition">Cancel</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isOwner && (
+            <div className="mt-6 pt-4 border-t border-gray-800 flex items-center gap-4 flex-wrap">
+              <button
+                onClick={handleArchive}
+                className="text-xs text-gray-600 hover:text-emerald-400 transition"
+              >
+                {resource.archived ? 'Unarchive' : 'Archive this resource'}
+              </button>
+              {!confirmDelete ? (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-xs text-gray-600 hover:text-red-400 transition"
+                >
+                  Delete this resource
                 </button>
-                <button onClick={() => setConfirmDelete(true)} className="text-gray-500 hover:text-red-400 transition">Delete</button>
-              </>
-            )}
-            {isOwner && confirmDelete && (
-              <>
-                <span>·</span>
-                <span className="text-red-400">Delete?</span>
-                <button onClick={handleDelete} className="text-red-400 hover:text-red-300 transition">Yes</button>
-                <button onClick={() => setConfirmDelete(false)} className="text-gray-500 hover:text-gray-300 transition">No</button>
-              </>
-            )}
-          </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-red-400">Are you sure?</span>
+                  <button
+                    onClick={onDelete}
+                    className="px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-medium hover:bg-red-500/30 transition"
+                  >
+                    Yes, delete
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="px-3 py-1 text-gray-500 text-xs hover:text-gray-300 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
