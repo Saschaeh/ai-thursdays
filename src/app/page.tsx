@@ -16,6 +16,7 @@ type Idea = {
   status: string; submitted_by: number; submitted_by_name: string;
   assigned_to: number[]; assigned_to_name: string | null; assigned_to_names: string[];
   links?: string[]; target_date: string | null; vote_count: number; comment_count: number;
+  archived?: boolean;
   created_at: string; updated_at: string;
   comments?: Comment[]; votes?: Vote[];
 };
@@ -70,6 +71,7 @@ export default function Home() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [tab, setTab] = useState<'research' | 'commercial' | 'resources' | 'diary' | 'requests' | 'profile'>('research');
   const [showNewIdea, setShowNewIdea] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   const [nameInput, setNameInput] = useState('');
   const [showNewMember, setShowNewMember] = useState(false);
@@ -422,17 +424,36 @@ export default function Home() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         {(tab === 'research' || tab === 'commercial') && (() => {
-          const boardIdeas = ideas.filter(i => (i.board ?? 'research') === tab);
+          const allBoardIdeas = ideas.filter(i => (i.board ?? 'research') === tab);
+          const activeIdeas = allBoardIdeas.filter(i => !i.archived);
+          const archivedIdeas = allBoardIdeas.filter(i => i.archived);
+          const boardIdeas = showArchived ? archivedIdeas : activeIdeas;
           return (
             <>
               <div className="flex justify-between items-center mb-5">
-                <p className="text-gray-500 text-sm">{boardIdeas.length} idea{boardIdeas.length !== 1 ? 's' : ''} submitted</p>
-                <button
-                  onClick={() => setShowNewIdea(true)}
-                  className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 text-sm font-medium transition"
-                >
-                  + New Idea
-                </button>
+                <div className="flex items-center gap-3 text-sm">
+                  <button
+                    onClick={() => setShowArchived(false)}
+                    className={`transition ${!showArchived ? 'text-gray-300 font-medium' : 'text-gray-500 hover:text-gray-300'}`}
+                  >
+                    {activeIdeas.length} idea{activeIdeas.length !== 1 ? 's' : ''} submitted
+                  </button>
+                  <span className="text-gray-700">|</span>
+                  <button
+                    onClick={() => setShowArchived(true)}
+                    className={`transition ${showArchived ? 'text-gray-300 font-medium' : 'text-gray-500 hover:text-gray-300'}`}
+                  >
+                    Archived
+                  </button>
+                </div>
+                {!showArchived && (
+                  <button
+                    onClick={() => setShowNewIdea(true)}
+                    className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 text-sm font-medium transition"
+                  >
+                    + New Idea
+                  </button>
+                )}
               </div>
 
               {showNewIdea && (
@@ -464,7 +485,7 @@ export default function Home() {
                 ))}
                 {boardIdeas.length === 0 && (
                   <div className="text-center py-16">
-                    <p className="text-gray-600 text-sm">No ideas yet. Be the first to add one!</p>
+                    <p className="text-gray-600 text-sm">{showArchived ? 'No archived ideas.' : 'No ideas yet. Be the first to add one!'}</p>
                   </div>
                 )}
               </div>
@@ -1072,8 +1093,21 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
             )}
           </div>
 
-          {/* Delete */}
-          <div className="mt-6 pt-4 border-t border-gray-800">
+          {/* Archive + Delete */}
+          <div className="mt-6 pt-4 border-t border-gray-800 flex items-center gap-4 flex-wrap">
+            <button
+              onClick={async () => {
+                await api(`/ideas/${idea.id}`, {
+                  method: 'PATCH',
+                  body: JSON.stringify({ archived: !idea.archived }),
+                });
+                onUpdate();
+                onClose();
+              }}
+              className="text-xs text-gray-600 hover:text-emerald-400 transition"
+            >
+              {idea.archived ? 'Unarchive' : 'Archive this idea'}
+            </button>
             {!confirmDelete ? (
               <button
                 onClick={() => setConfirmDelete(true)}

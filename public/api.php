@@ -368,6 +368,9 @@ if (preg_match('#^/ideas/(\d+)$#', $route, $m)) {
             if (!is_array($links)) $links = [];
             $data['ideas'][$ideaIdx]['links'] = array_values(array_slice(array_filter(array_map('trim', $links)), 0, 3));
         }
+        if (array_key_exists('archived', $body)) {
+            $data['ideas'][$ideaIdx]['archived'] = (bool)$body['archived'];
+        }
         foreach (['title', 'description', 'category', 'board', 'status', 'target_date'] as $key) {
             if (array_key_exists($key, $body)) {
                 $data['ideas'][$ideaIdx][$key] = $body[$key];
