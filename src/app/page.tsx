@@ -1270,22 +1270,6 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
         </div>
       </div>
 
-      {assignedIdeas.length > 0 && (
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Your Assignments</h3>
-          <div className="space-y-2">
-            {assignedIdeas.map(idea => (
-              <div key={idea.id} className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0">
-                <span className="text-sm text-white">{idea.title}</span>
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
-                  {STATUS_LABELS[idea.status]}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="mt-6 text-center">
         <button onClick={onLogout} className="text-sm text-gray-500 hover:text-red-400 transition">
           Log out / Switch user
@@ -1293,18 +1277,36 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
       </div>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">The Squad</h3>
-        <div className="space-y-3">
-          {otherMembers.map(m => (
-            <div key={m.id} className="flex items-center gap-3">
-              <Avatar member={m} size="md" />
-              <span className="text-sm text-white">{m.name}</span>
+      <div className="space-y-5">
+        {assignedIdeas.length > 0 && (
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Your Assignments</h3>
+            <div className="space-y-2">
+              {assignedIdeas.map(idea => (
+                <div key={idea.id} className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0">
+                  <span className="text-sm text-white">{idea.title}</span>
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${STATUS_COLORS[idea.status]}`}>
+                    {STATUS_LABELS[idea.status]}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-          {otherMembers.length === 0 && (
-            <p className="text-sm text-gray-600">No other members yet.</p>
-          )}
+          </div>
+        )}
+
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">The Squad</h3>
+          <div className="space-y-3">
+            {otherMembers.map(m => (
+              <div key={m.id} className="flex items-center gap-3">
+                <Avatar member={m} size="md" />
+                <span className="text-sm text-white">{m.name}</span>
+              </div>
+            ))}
+            {otherMembers.length === 0 && (
+              <p className="text-sm text-gray-600">No other members yet.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
