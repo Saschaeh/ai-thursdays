@@ -1093,8 +1093,11 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const otherMembers = members.filter(m => m.id !== currentUser.id).sort((a, b) => a.name.localeCompare(b.name));
+
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="grid md:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
+      <div>
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 mb-5">
         <div className="flex items-center gap-4 mb-6">
           <Avatar member={{ ...currentUser, avatar: selectedAvatar }} size="lg" />
@@ -1195,6 +1198,22 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
         <button onClick={onLogout} className="text-sm text-gray-500 hover:text-red-400 transition">
           Log out / Switch user
         </button>
+      </div>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">Team</h3>
+        <div className="space-y-3">
+          {otherMembers.map(m => (
+            <div key={m.id} className="flex items-center gap-3">
+              <Avatar member={m} size="md" />
+              <span className="text-sm text-white">{m.name}</span>
+            </div>
+          ))}
+          {otherMembers.length === 0 && (
+            <p className="text-sm text-gray-600">No other members yet.</p>
+          )}
+        </div>
       </div>
     </div>
   );
