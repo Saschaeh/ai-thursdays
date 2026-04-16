@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How Memory Became An Attention Question</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; }
+  body { background: #0a0a14; font-family: monospace; overflow: hidden; }
+  #root { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const e = React.createElement;
+const { useState, useEffect, useCallback } = React;
+
+function PixelCard({ children, style }) {
+  return e("div", { style: {
+    background: "rgba(255,255,255,0.03)", border: "2px solid #333",
+    padding: "14px 16px", position: "relative", ...style
+  }}, children);
+}
+
+function PixelDivider() {
+  return e("div", { style: { display: "flex", gap: 4, justifyContent: "center", margin: "8px 0" }},
+    Array.from({ length: 16 }).map((_, i) =>
+      e("div", { key: i, style: { width: 6, height: 2, background: i % 2 === 0 ? "#444" : "#333" }})
+    )
+  );
+}
+
+function Label({ children, color }) {
+  return e("div", { style: { fontSize: 12, letterSpacing: 4, color, fontWeight: 700, fontFamily: "monospace" }}, children);
+}
+
+function dirsFor(shape) {
+  const out = [];
+  if (shape === "radial") {
+    for (let i = 0; i < 16; i++) {
+      const a = i * Math.PI / 8;
+      const r = 36 + (i % 2) * 5;
+      out.push({ dx: Math.round(r * Math.sin(a)), dy: Math.round(-r * Math.cos(a)), s: 3 - (i % 2) });
+    }
+  } else if (shape === "snowflake") {
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3;
+      for (let d = 1; d <= 3; d++) {
+        const r = d * 12;
+        out.push({ dx: Math.round(r * Math.sin(a)), dy: Math.round(-r * Math.cos(a)), s: d === 3 ? 2 : 3 });
+      }
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3;
+      const r = 22;
+      out.push({ dx: Math.round(r * Math.sin(a + Math.PI / 9)), dy: Math.round(-r * Math.cos(a + Math.PI / 9)), s: 1 });
+      out.push({ dx: Math.round(r * Math.sin(a - Math.PI / 9)), dy: Math.round(-r * Math.cos(a - Math.PI / 9)), s: 1 });
+    }
+  } else if (shape === "ring") {
+    for (let i = 0; i < 14; i++) {
+      const a = i * Math.PI / 7;
+      const r = 36;
+      out.push({ dx: Math.round(r * Math.sin(a)), dy: Math.round(-r * Math.cos(a)), s: 3 });
+    }
+  } else if (shape === "star") {
+    for (let i = 0; i < 5; i++) {
+      const a = i * 2 * Math.PI / 5;
+      for (let d = 1; d <= 3; d++) {
+        const r = d * 13;
+        out.push({ dx: Math.round(r * Math.sin(a)), dy: Math.round(-r * Math.cos(a)), s: d === 3 ? 4 : 3 });
+      }
+    }
+    for (let i = 0; i < 5; i++) {
+      const a = (i + 0.5) * 2 * Math.PI / 5;
+      const r = 14;
+      out.push({ dx: Math.round(r * Math.sin(a)), dy: Math.round(-r * Math.cos(a)), s: 2 });
+    }
+  } else if (shape === "dense") {
+    for (let i = 0; i < 20; i++) {
+      const a = i * Math.PI / 10;
+      const r = 30 + (i % 3) * 7;
+      out.push({ dx: Math.round(r * Math.sin(a)), dy: Math.round(-r * Math.cos(a)), s: 2 + (i % 2) });
+    }
+  }
+  return out;
+}
+
+function PixelIcon({ type }) {
+  const defs = {
+    eye: { pts: [[2,3],[3,3],[4,3],[1,2],[5,2],[0,1],[6,1],[3,1],[2,0],[4,0],[1,4],[5,4],[0,5],[6,5],[3,5]], c: "#64ffda" },
+    snowflake: { pts: [[3,0],[3,1],[3,2],[3,3],[3,4],[3,5],[3,6],[0,3],[1,3],[2,3],[4,3],[5,3],[6,3],[1,1],[5,1],[1,5],[5,5]], c: "#64ffda" },
+    wave: { pts: [[0,3],[1,2],[2,1],[3,2],[4,3],[5,4],[6,3]], c: "#ffd93d" },
+    bolt: { pts: [[3,0],[2,1],[2,2],[1,3],[2,3],[3,3],[4,3],[3,4],[3,5],[4,6]], c: "#ff6b6b" },
+    "lens-wide": { pts: [[1,0],[2,0],[3,0],[4,0],[5,0],[0,1],[6,1],[0,2],[6,2],[0,3],[6,3],[0,4],[6,4],[1,5],[5,5],[2,6],[3,6],[4,6]], c: "#ff6b6b" },
+    "lens-focused": { pts: [[2,1],[3,1],[4,1],[1,2],[5,2],[1,3],[5,3],[1,4],[5,4],[2,5],[3,5],[4,5],[3,3]], c: "#4ade80" },
+    "question": { pts: [[1,0],[2,0],[3,0],[0,1],[4,1],[4,2],[3,3],[2,4],[2,6]], c: "#ffd93d" },
+  };
+  const d = defs[type];
+  if (!d) return null;
+  return e("div", { style: { position: "relative", width: 24, height: 24, imageRendering: "pixelated" }},
+    d.pts.map(([x, y], i) => e("div", { key: i, style: { position: "absolute", left: x * 3, top: y * 3, width: 3, height: 3, background: d.c }}))
+  );
+}
+
+const SLIDES = [
+
+  // 1 - Title
+  () => e("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 18 }},
+    e("div", { style: { display: "flex", gap: 8 }},
+      [0,1,2,3,4].map(i => e("div", { key: i, style: { width: 14 + i * 8, height: 14 + i * 8, border: "2px solid hsl(" + (200 + i*15) + ", 70%, " + (60 - i*8) + "%)", opacity: 0.6 }}))
+    ),
+    e("div", { style: { fontSize: 13, letterSpacing: 6, color: "#64ffda", fontFamily: "monospace" }}, "AN EXPLORATION"),
+    e("div", { style: { fontSize: 44, fontWeight: 700, color: "#fff", fontFamily: "monospace", textAlign: "center", lineHeight: 1.1, textShadow: "3px 3px 0 #1a1a2e" }},
+      "HOW MEMORY", e("br"), "BECAME AN", e("br"), "ATTENTION QUESTION"
+    ),
+    e("div", { style: { color: "#aaa", fontSize: 13, fontStyle: "italic" }}, "Notes from the underground"),
+    e("div", { style: { display: "flex", gap: 18, marginTop: 18, alignItems: "flex-end" }},
+      [
+        { src: "https://idletuesday.ai/Thursdays/avatars/pirate.svg", alt: "pirate" },
+        { src: "https://idletuesday.ai/Thursdays/avatars/vader.svg", alt: "vader" },
+        { src: "https://idletuesday.ai/Thursdays/avatars/doomguy.svg", alt: "doomguy" },
+        { src: "https://idletuesday.ai/Thursdays/avatars/astronaut.svg", alt: "astronaut" }
+      ].map((a, i) => e("img", { key: i, src: a.src, alt: a.alt, style: { width: 56, height: 56, imageRendering: "pixelated" }})),
+      e("div", { key: "mystery", style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }},
+        e(PixelIcon, { type: "question" }),
+        e("img", { src: "mystery_guest.png", alt: "mystery guest", style: { width: 56, height: 56, imageRendering: "pixelated", borderRadius: "50%", objectFit: "cover" }})
+      )
+    )
+  ),
+
+  // 2 - The journey so far
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e(Label, { color: "#64ffda" }, "THE JOURNEY SO FAR"),
+    e("div", { style: { color: "#fff", fontSize: 22, fontWeight: 700, marginTop: 8, marginBottom: 4 }}, "You\u2019ve seen pieces of this before."),
+    e("div", { style: { color: "#ccc", fontSize: 12, fontStyle: "italic", marginBottom: 12 }}, "When I started taking on larger projects, Claude kept forgetting things. This group has watched me try to close that gap a few times already."),
+    e("div", { style: { display: "flex", flexDirection: "column", gap: 8, flex: 1 }},
+      [
+        { n: "01", title: "CLAUDE.md + scratchpad", desc: "Global, project, nested. Plus the scratchpad. All the places to park instructions inside the built-in memory hierarchy.", color: "#64ffda" },
+        { n: "02", title: "BMAD", desc: "The methodology I walked through last time. Structure for what goes in context \u2014 PRDs, stories, architecture, acceptance criteria.", color: "#64ffda" },
+        { n: "03", title: "Custom /start and /end session", desc: "Slash commands I wrote to handle session handoff manually. Read the last state at start; write a handoff file at end.", color: "#c084fc" }
+      ].map((r, i) => e(PixelCard, { key: i, style: { display: "flex", gap: 14, padding: "8px 14px", borderLeftWidth: 3, borderLeftColor: r.color }},
+        e("div", { style: { color: r.color, fontWeight: 700, fontSize: 18, fontFamily: "monospace", minWidth: 32 }}, r.n),
+        e("div", { style: { flex: 1 }},
+          e("div", { style: { color: "#fff", fontWeight: 700, fontSize: 13, marginBottom: 2 }}, r.title),
+          e("div", { style: { color: "#888", fontSize: 12, lineHeight: 1.45 }}, r.desc)
+        )
+      )),
+      e("div", { key: "arrow", style: { display: "flex", alignItems: "center", gap: 10, paddingLeft: 36, marginTop: 2 }},
+        e("span", { style: { color: "#ffd93d", fontSize: 22, fontFamily: "monospace", lineHeight: 1 }}, "\u21B3"),
+        e("span", { style: { color: "#888", fontSize: 11, fontStyle: "italic" }}, "which led me to start researching\u2026")
+      ),
+      e(PixelCard, { key: "rag", style: { display: "flex", gap: 14, padding: "8px 14px", border: "2px dashed #ffd93d", borderLeftWidth: 3 }},
+        e("div", { style: { color: "#ffd93d", fontWeight: 700, fontSize: 18, fontFamily: "monospace", minWidth: 32 }}, "04"),
+        e("div", { style: { flex: 1 }},
+          e("div", { style: { color: "#fff", fontWeight: 700, fontSize: 13, marginBottom: 2 }}, "RAG-type memory solutions"),
+          e("div", { style: { color: "#888", fontSize: 12, lineHeight: 1.45 }}, "Vector databases, knowledge graphs, filesystem-paradigm stores, MCP-native memory servers (Supermemory, OpenViking, Zep). I haven\u2019t set any of them up \u2014 researching them is what led into everything else we\u2019re about to talk about.")
+        )
+      )
+    )
+  ),
+
+  // 8 - Reframing question
+  () => e("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 14 }},
+    e(Label, { color: "#64ffda" }, "A QUESTION THAT REFRAMED IT"),
+    e("div", { style: { fontSize: 26, fontWeight: 700, color: "#fff", fontFamily: "monospace", textAlign: "center", lineHeight: 1.4, maxWidth: 760, marginTop: 8 }},
+      "So the question is perhaps not ", e("br"),
+      e("span", { style: { color: "#888" }}, "\u201Chow much does it remember\u201D"), e("br"),
+      "but ", e("span", { style: { color: "#64ffda" }}, "\u201Cwhere and when is the attention?\u201D")
+    ),
+    e("div", { style: { color: "#aaa", fontSize: 13, fontStyle: "italic", marginTop: 16, maxWidth: 620, textAlign: "center" }}, "Memory is cheap; attention is difficult.")
+  ),
+
+  // 9 - Aperture
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e(Label, { color: "#64ffda" }, "A METAPHOR I FOUND USEFUL"),
+    e("div", { style: { color: "#fff", fontSize: 22, fontWeight: 700, marginTop: 8, marginBottom: 12 }}, "The aperture"),
+    e("div", { style: { color: "#ccc", fontSize: 12, fontStyle: "italic", marginBottom: 14 }}, "A big aperture is useful. The harder question is where to focus \u2014 and when to change focus."),
+    e("div", { style: { flex: 1, display: "flex", gap: 20, alignItems: "stretch" }},
+      e(PixelCard, { style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderColor: "#ff6b6b" }},
+        e(PixelIcon, { type: "lens-wide" }),
+        e("div", { style: { color: "#ff6b6b", fontWeight: 700, fontSize: 16, marginTop: 10 }}, "SPACE"),
+        e("div", { style: { width: 90, height: 90, border: "3px dashed #ff6b6b", borderRadius: "50%", margin: "12px 0", display: "flex", alignItems: "center", justifyContent: "center" }},
+          e("span", { style: { color: "#888", fontSize: 11, textAlign: "center" }}, "everything", e("br"), "blurry")
+        ),
+        e("div", { style: { color: "#888", fontSize: 11, textAlign: "center" }}, "Everything loaded.", e("br"), "No priority.")
+      ),
+      e(PixelCard, { style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderColor: "#4ade80" }},
+        e(PixelIcon, { type: "lens-focused" }),
+        e("div", { style: { color: "#4ade80", fontWeight: 700, fontSize: 16, marginTop: 10 }}, "FOCUS"),
+        e("div", { style: { width: 42, height: 42, border: "3px solid #4ade80", borderRadius: "50%", margin: "12px 0", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(74,222,128,0.1)" }},
+          e("span", { style: { color: "#4ade80", fontSize: 10 }}, "sharp")
+        ),
+        e("div", { style: { color: "#888", fontSize: 11, textAlign: "center" }}, "Only what\u2019s needed", e("br"), "right now.")
+      ),
+      e(PixelCard, { style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderColor: "#ffd93d" }},
+        e("div", { style: { color: "#ffd93d", fontWeight: 700, fontSize: 16, marginTop: 4 }}, "TIME"),
+        e("div", { style: { display: "flex", gap: 4, margin: "14px 0" }},
+          [0,1,2,3,4].map(i => e("div", { key: i, style: { width: 8, height: 22, background: i === 2 ? "#ffd93d" : "#333" }}))
+        ),
+        e("div", { style: { color: "#888", fontSize: 11, textAlign: "center" }}, "Focus at the right", e("br"), "moment. Not before.")
+      )
+    ),
+    e("div", { style: { color: "#aaa", fontSize: 12, fontStyle: "italic", marginTop: 12, textAlign: "center" }}, "Maybe the art of AI memory is in exclusion and timing.")
+  ),
+
+  // 10 - Transition: where does blur happen
+  () => e("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 18 }},
+    e(Label, { color: "#64ffda" }, "SO WHERE DOES BLUR HAPPEN?"),
+    e("div", { style: { fontSize: 26, fontWeight: 700, color: "#fff", textAlign: "center", lineHeight: 1.4, maxWidth: 720 }},
+      "I noticed three moments ", e("br"), "where focus broke down."
+    ),
+    e("div", { style: { color: "#aaa", fontSize: 13, fontStyle: "italic", marginTop: 10 }}, "They look similar from the outside but seem to have different causes.")
+  ),
+
+  // 11 - Three Blur Points overview
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e(Label, { color: "#64ffda" }, "THREE BLUR POINTS"),
+    e("div", { style: { color: "#888", fontSize: 12, fontStyle: "italic", marginBottom: 16 }}, "Three distinct moments where focus breaks down."),
+    e("div", { style: { flex: 1, display: "flex", gap: 16 }},
+      [
+        { label: "AMNESIA", title: "Between\nsessions", desc: "Baseline loads,\nbut yesterday\u2019s thinking is gone.", color: "#64ffda", icon: "snowflake" },
+        { label: "CONTEXT ROT", title: "Within a\nsession", desc: "Rules diluted by volume.\nEarly context fades.", color: "#ffd93d", icon: "wave" },
+        { label: "RECENCY BIAS", title: "At generation\ntime", desc: "Local patterns beat rules.\nCan\u2019t prompt your way out.", color: "#ff6b6b", icon: "bolt" }
+      ].map((bp, i) =>
+        e(PixelCard, { key: i, style: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", borderColor: bp.color, borderTopWidth: 3 }},
+          e(PixelIcon, { type: bp.icon }),
+          e("div", { style: { color: bp.color, fontSize: 10, letterSpacing: 3, marginTop: 10, fontWeight: 700 }}, bp.label),
+          e("div", { style: { color: "#fff", fontSize: 14, fontWeight: 700, marginTop: 8, whiteSpace: "pre-line", lineHeight: 1.3 }}, bp.title),
+          e("div", { style: { color: "#888", fontSize: 11, marginTop: 10, whiteSpace: "pre-line", lineHeight: 1.5 }}, bp.desc)
+        )
+      )
+    )
+  ),
+
+  // 13 - BP1 tools (session commands + Supermemory)
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e(Label, { color: "#4ade80" }, "WHAT I\u2019VE TRIED"),
+    e("div", { style: { color: "#fff", fontSize: 22, fontWeight: 700, marginTop: 8, marginBottom: 14 }}, "Two approaches"),
+    e("div", { style: { display: "flex", gap: 16, flex: 1 }},
+      e(PixelCard, { style: { flex: 1, borderColor: "#c084fc" }},
+        e("div", { style: { color: "#c084fc", fontSize: 10, letterSpacing: 3, fontWeight: 700, marginBottom: 10 }}, "CURRENT: /START AND /END SESSION"),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.6 }}, "My own slash commands. "),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.6, marginTop: 6 }},
+          e("span", { style: { color: "#c084fc", fontWeight: 700 }}, "/start-session"),
+          " reads the last handoff file, BMAD state, git log, memory files and briefs me back."
+        ),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.6, marginTop: 6 }},
+          e("span", { style: { color: "#c084fc", fontWeight: 700 }}, "/end-session"),
+          " writes a handoff file: what was done, decisions made, open questions."
+        ),
+        e("div", { style: { color: "#c084fc", fontSize: 12, fontWeight: 700, marginTop: 10 }}, "+ BMAD underneath"),
+        e("div", { style: { color: "#888", fontSize: 11, fontStyle: "italic", marginTop: 4 }}, "Plain markdown. No database. Portable.")
+      ),
+      e(PixelCard, { style: { flex: 1, borderColor: "#4ade80" }},
+        e("div", { style: { color: "#4ade80", fontSize: 10, letterSpacing: 3, fontWeight: 700, marginBottom: 10 }}, "TRYING: SUPERMEMORY"),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 6 }},
+          e("b", { style: { color: "#fff" }}, "What it is: "),
+          "a cloud-hosted memory store with semantic retrieval on top, plus some prioritization and decision-making about what to store and when to surface it."
+        ),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 6 }},
+          e("b", { style: { color: "#fff" }}, "How it gets used: "),
+          "it\u2019s a pull, not a push. The agent has to decide to call Supermemory\u2019s search tool. Nothing watches my prompt for keywords \u2014 that would need a hook on top."
+        ),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 6 }},
+          e("b", { style: { color: "#fff" }}, "Why for amnesia: "),
+          "state persists across sessions automatically. The next session doesn\u2019t start from a handoff file \u2014 it queries the store for whatever it needs."
+        ),
+        e("div", { style: { color: "#ffd93d", fontSize: 11, fontStyle: "italic", marginTop: 8 }},
+          "What it doesn\u2019t solve: retrieved state lands in context where it still has to survive context rot. And I\u2019m trusting the agent to decide what to store and when to retrieve."
+        )
+      )
+    )
+  ),
+
+  // 16 - BP2 options I want to try
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e(Label, { color: "#ffd93d" }, "OPTIONS I WANT TO TRY"),
+    e("div", { style: { color: "#fff", fontSize: 22, fontWeight: 700, marginTop: 8, marginBottom: 4 }}, "Automatic context injection"),
+    e("div", { style: { color: "#ccc", fontSize: 12, fontStyle: "italic", marginBottom: 12 }}, "At every significant moment \u2014 each tool call, each message \u2014 a hook inspects what\u2019s in context and pulls the relevant rule into the prompt."),
+    e("div", { style: { display: "flex", gap: 14, flex: 1 }},
+      e(PixelCard, { style: { flex: 1, borderColor: "#4ade80", borderLeftWidth: 3 }},
+        e("div", { style: { color: "#4ade80", fontSize: 10, letterSpacing: 2, fontWeight: 700, marginBottom: 8 }}, "PRE-TOOL-USE HOOK"),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 8 }}, "A script the runtime fires right before the agent calls a tool (Edit, Write, etc.). It inspects the call and injects a relevant rule into the prompt, based on the file path or keywords."),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 8 }}, "Tools that do this: ", e("b", { style: { color: "#fff" }}, "Claude Code hooks"), " (settings.json), ", e("b", { style: { color: "#fff" }}, "Claude Code skills"), " (auto-activate on triggers), ", e("b", { style: { color: "#fff" }}, "Cursor rules"), " (.mdc files, glob-matched), ", e("b", { style: { color: "#fff" }}, "Cline rules"), "."),
+        e("div", { style: { color: "#888", fontSize: 11, fontStyle: "italic" }}, "Closest thing to the \u201Cautomatic\u201D ideal from earlier.")
+      ),
+      e(PixelCard, { style: { flex: 1, borderColor: "#4ade80", borderLeftWidth: 3 }},
+        e("div", { style: { color: "#4ade80", fontSize: 10, letterSpacing: 2, fontWeight: 700, marginBottom: 8 }}, "CONSTITUTION PROMPT"),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 8 }}, "A short, high-priority rule set re-injected near the top of context on every turn. Maybe ten to twenty lines of the most important rules, rebuilt often."),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 8 }}, "Unlike CLAUDE.md (loads once, slowly drowns), a constitution gets refreshed every turn \u2014 usually via a hook or a custom system-prompt builder."),
+        e("div", { style: { color: "#888", fontSize: 11, fontStyle: "italic" }}, "Short enough to stay in local traffic no matter how long the session gets.")
+      )
+    ),
+    e("div", { style: { color: "#ff6b6b", fontSize: 12, fontStyle: "italic", marginTop: 12, textAlign: "center" }}, "And even if both of these worked, there\u2019d still be a third thing they couldn\u2019t catch \u2014 upstream of prompting entirely.")
+  ),
+
+  // 18 - Pattern vs rules (combined)
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e("div", { style: { color: "#fff", fontSize: 26, fontWeight: 700, marginTop: 4, marginBottom: 14 }}, "Pattern matching vs. rules"),
+    e("div", { style: { display: "flex", gap: 16, flex: 1, alignItems: "stretch" }},
+      e(PixelCard, { style: { flex: 1, textAlign: "center", borderColor: "#4ade80", display: "flex", flexDirection: "column", justifyContent: "center" }},
+        e("div", { style: { color: "#4ade80", fontWeight: 700, fontSize: 16 }}, "THE RULE"),
+        e("div", { style: { color: "#ccc", fontSize: 12, fontStyle: "italic", margin: "10px 0" }}, "\u201CUse the site-wide footer.\u201D"),
+        e(PixelDivider),
+        e("div", { style: { color: "#888", fontSize: 11 }}, "Abstract. Loaded early.", e("br"), "Fading attention weight.")
+      ),
+      e("div", { style: { display: "flex", alignItems: "center" }},
+        e("div", { style: { background: "#333", borderRadius: "50%", width: 50, height: 50, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 16, fontFamily: "monospace" }}, "VS")
+      ),
+      e(PixelCard, { style: { flex: 1, textAlign: "center", borderColor: "#ff6b6b", display: "flex", flexDirection: "column", justifyContent: "center" }},
+        e("div", { style: { color: "#ff6b6b", fontWeight: 700, fontSize: 16 }}, "THE PATTERN"),
+        e("div", { style: { color: "#ccc", fontSize: 12, fontStyle: "italic", margin: "10px 0" }}, "A complex CSS grid that \u201Cfeels\u201D like it needs a custom footer"),
+        e(PixelDivider),
+        e("div", { style: { color: "#888", fontSize: 11 }}, "Concrete. Immediate.", e("br"), "Max attention weight.")
+      )
+    ),
+    e(PixelCard, { style: { marginTop: 14 }},
+      e("div", { style: { color: "#fff", fontSize: 14, fontWeight: 700, textAlign: "center", marginBottom: 6, lineHeight: 1.5 }},
+        "You\u2019re telling the model ",
+        e("span", { style: { color: "#64ffda" }}, "\u201Cdon\u2019t do the thing,\u201D"),
+        " against the gravity of the code it\u2019s actually looking at."
+      ),
+      e("div", { style: { color: "#888", fontSize: 12, textAlign: "center", fontStyle: "italic" }}, "The model \u201Cunderstands\u201D the rule. It just doesn\u2019t win against the pattern.")
+    )
+  ),
+
+  // 20 - Step outside the model (with linting explained)
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e(Label, { color: "#4ade80" }, "A DIFFERENT ANGLE"),
+    e("div", { style: { color: "#fff", fontSize: 22, fontWeight: 700, marginTop: 8, marginBottom: 8 }}, "Step outside the model"),
+    e("div", { style: { color: "#ccc", fontSize: 12, fontStyle: "italic", marginBottom: 14 }}, "The most reliable defense doesn\u2019t require the model\u2019s cooperation."),
+    e("div", { style: { display: "flex", gap: 14, flex: 1 }},
+      e(PixelCard, { style: { flex: 1 }},
+        e("div", { style: { color: "#ffd93d", fontWeight: 700, fontSize: 13, marginBottom: 8 }}, "LLM (probabilistic)"),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55 }}, "Rolls weighted dice to pick the next token. Generates freely. Might break rules. That\u2019s fine \u2014 let it.")
+      ),
+      e("div", { style: { display: "flex", alignItems: "center", color: "#64ffda", fontSize: 24, fontFamily: "monospace" }}, "\u2192"),
+      e(PixelCard, { style: { flex: 1, borderColor: "#4ade80" }},
+        e("div", { style: { color: "#4ade80", fontWeight: 700, fontSize: 13, marginBottom: 8 }}, "DETERMINISTIC CHECK"),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 8 }}, e("b", null, "What it is: "), "a small program that inspects the output against a rigid rule. No dice-rolling. Same input always produces the same pass/fail answer."),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55 }}, e("b", null, "Example: "), "a rule says \u201Cuse the site-wide footer.\u201D A checker scans every page and fails the build if it finds a custom footer. The model can generate whatever it wants \u2014 the build doesn\u2019t ship until the check passes.")
+      )
+    )
+  ),
+
+  // 21 - Kinds of deterministic checks
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e(Label, { color: "#4ade80" }, "DIFFERENT KINDS OF DETERMINISTIC CHECKS"),
+    e("div", { style: { color: "#fff", fontSize: 22, fontWeight: 700, marginTop: 8, marginBottom: 14 }}, "All catch the output, not the process"),
+    e("div", { style: { display: "flex", flexDirection: "column", gap: 10, flex: 1, justifyContent: "center" }},
+      [
+        { k: "Linters", v: "Small programs that scan code for banned patterns. ESLint, Pylint, Ruff \u2014 the classic examples." },
+        { k: "Pre-commit hooks", v: "Wired to git. Block the commit if the code fails a rule before it\u2019s even shared." },
+        { k: "Schema validators", v: "For structured output. Reject JSON that doesn\u2019t match the expected shape." },
+        { k: "Tests", v: "The oldest deterministic check there is. Does the code actually do what it\u2019s supposed to?" },
+        { k: "Guardrail passes", v: "A separate model call whose only job is to grade compliance. Not fully deterministic, but adversarial enough to catch most drift." }
+      ].map((r, i) => e(PixelCard, { key: i, style: { display: "flex", gap: 16, padding: "8px 14px", borderLeftWidth: 3, borderLeftColor: "#4ade80" }},
+        e("div", { style: { color: "#4ade80", fontWeight: 700, fontSize: 13, fontFamily: "monospace", minWidth: 170 }}, r.k),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.5 }}, r.v)
+      ))
+    ),
+    e("div", { style: { color: "#888", fontSize: 11, fontStyle: "italic", marginTop: 10, textAlign: "center" }}, "All of these are tools the model can\u2019t talk its way out of.")
+  ),
+
+  // ACT 3 - The automation tradeoff (cross-cutting reflection)
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e(Label, { color: "#c084fc" }, "A TRADE-OFF THAT SHOWS UP EVERYWHERE"),
+    e("div", { style: { color: "#fff", fontSize: 22, fontWeight: 700, marginTop: 8, marginBottom: 4 }}, "Automatic vs. manual"),
+    e("div", { style: { color: "#ccc", fontSize: 12, fontStyle: "italic", marginBottom: 12 }}, "Every layer we just covered \u2014 amnesia tools, context rot options, recency bias checks \u2014 sits somewhere on this line."),
+    e("div", { style: { display: "flex", gap: 14, flex: 1 }},
+      e(PixelCard, { style: { flex: 1, borderColor: "#c084fc", borderLeftWidth: 3 }},
+        e("div", { style: { color: "#c084fc", fontSize: 10, letterSpacing: 3, fontWeight: 700, marginBottom: 8 }}, "MANUAL"),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 6 }}, "I write. I curate. I read it back."),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 6 }}, "Slow. Disciplined. Nothing gets stored I didn\u2019t approve."),
+        e("div", { style: { color: "#888", fontSize: 11, fontStyle: "italic", marginTop: 8 }}, "What to focus on is solved \u2014 I chose it. When to focus on it still isn\u2019t.")
+      ),
+      e(PixelCard, { style: { flex: 1, borderColor: "#4ade80", borderLeftWidth: 3 }},
+        e("div", { style: { color: "#4ade80", fontSize: 10, letterSpacing: 3, fontWeight: 700, marginBottom: 8 }}, "AUTOMATIC"),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 6 }}, "An agent writes, curates, retrieves."),
+        e("div", { style: { color: "#ccc", fontSize: 12, lineHeight: 1.55, marginBottom: 6 }}, "Fast. Runs in the background. Follows me across devices."),
+        e("div", { style: { color: "#ffd93d", fontSize: 11, fontStyle: "italic", marginTop: 8 }}, "But I\u2019m now trusting another agent to decide what to focus on and when \u2014 which is the problem we started with.")
+      )
+    )
+  ),
+
+  // ACT 3 - Memory landscape
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "16px 0" }},
+    e(Label, { color: "#c084fc" }, "MEMORY LANDSCAPE"),
+    e("div", { style: { color: "#fff", fontSize: 20, fontWeight: 700, marginTop: 4, marginBottom: 2 }}, "Tools for amnesia"),
+    e("div", { style: { color: "#ccc", fontSize: 11, fontStyle: "italic", marginBottom: 8 }}, "What they are, how they work, what they do and don\u2019t."),
+    e("div", { style: { display: "flex", flexDirection: "column", gap: 5, flex: 1 }},
+      [
+        {
+          name: "Supermemory",
+          what: "Cloud-hosted memory store you reach via MCP tool calls.",
+          how: "You (or the agent) store text in it. The agent calls a search tool with a query; semantic search matches and returns the top chunks into context.",
+          usp: "State follows you across sessions and clients with no handoff file.",
+          doesnt: "Watch what you\u2019re doing and push context in. The agent has to decide to query it."
+        },
+        {
+          name: "OpenViking",
+          what: "Filesystem-organised memory with a typed directory layout.",
+          how: "Memories live in structured folders (resources, user, agent, session). Each tier has a different scope \u2014 always-loaded, session-scoped, or pulled on demand.",
+          usp: "Claims ~91% fewer tokens than flat RAG by only loading the tier needed for the current task.",
+          doesnt: "Run as a hosted service. It\u2019s an on-disk convention \u2014 doesn\u2019t travel between clients automatically."
+        },
+        {
+          name: "Zep / Graphiti",
+          what: "Knowledge graph where every fact is time-stamped.",
+          how: "Facts become graph nodes with \u201Cvalid-from\u201D and \u201Cvalid-to\u201D edges. You can query \u201Cwhat did the system believe last month?\u201D without losing the current state.",
+          usp: "Replay historical state when decisions change over time \u2014 rare among memory tools.",
+          doesnt: "Help with in-session decay. It\u2019s about storage and retrieval, not attention."
+        },
+        {
+          name: "Letta",
+          what: "Agent-memory framework where the agent manages its own notes.",
+          how: "Letta gives the agent tools to read, write, and rewrite its memory. Between sessions it consolidates automatically.",
+          usp: "Zero manual curation \u2014 fully automatic.",
+          doesnt: "Give you easy control. When the agent\u2019s judgment is wrong, you debug its reasoning, not a file."
+        }
+      ].map((t, i) => e(PixelCard, { key: i, style: { padding: "5px 10px" }},
+        e("div", { style: { color: "#fff", fontWeight: 700, fontSize: 12, fontFamily: "monospace", marginBottom: 1 }}, t.name),
+        e("div", { style: { color: "#ccc", fontSize: 10, lineHeight: 1.35 }},
+          e("span", { style: { color: "#c084fc", fontWeight: 700 }}, "What: "), t.what
+        ),
+        e("div", { style: { color: "#ccc", fontSize: 10, lineHeight: 1.35 }},
+          e("span", { style: { color: "#c084fc", fontWeight: 700 }}, "How: "), t.how
+        ),
+        e("div", { style: { color: "#4ade80", fontSize: 10, lineHeight: 1.35 }},
+          e("span", { style: { fontWeight: 700 }}, "Why: "), t.usp
+        ),
+        e("div", { style: { color: "#ff9a9a", fontSize: 10, lineHeight: 1.35 }},
+          e("span", { style: { fontWeight: 700 }}, "Doesn\u2019t: "), t.doesnt
+        )
+      ))
+    ),
+    e("div", { style: { color: "#aaa", fontSize: 10, fontStyle: "italic", marginTop: 6, textAlign: "center" }}, "All memory tools \u2014 they help with amnesia. For context rot and recency bias, see the next slide.")
+  ),
+
+  // ACT 3 - Auto-inject landscape
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "16px 0" }},
+    e(Label, { color: "#ffd93d" }, "AUTO-INJECT LANDSCAPE"),
+    e("div", { style: { color: "#fff", fontSize: 20, fontWeight: 700, marginTop: 4, marginBottom: 2 }}, "Tools for context rot and recency bias"),
+    e("div", { style: { color: "#ccc", fontSize: 11, fontStyle: "italic", marginBottom: 8 }}, "What triggers them, how they inject, what they do and don\u2019t."),
+    e("div", { style: { display: "flex", flexDirection: "column", gap: 5, flex: 1 }},
+      [
+        {
+          name: "Claude Code hooks",
+          what: "Runtime scripts you register in settings.json.",
+          how: "Fire on lifecycle events (PreToolUse, UserPromptSubmit, SessionStart). Your script inspects the event \u2014 prompt text, tool arguments, file paths \u2014 and can match on keywords, paths, or any custom logic before injecting content.",
+          usp: "Maximum control. You decide exactly when and what gets injected.",
+          doesnt: "Come with any defaults. You build every matcher yourself."
+        },
+        {
+          name: "Claude Code skills",
+          what: "Auto-activating context packages built into Claude Code.",
+          how: "Each skill declares keyword triggers and/or file patterns in its frontmatter. When a trigger matches, the skill\u2019s markdown loads into context.",
+          usp: "Declarative. No scripting \u2014 just frontmatter + markdown.",
+          doesnt: "Give you runtime-level logic. If you need custom behaviour, fall back to a hook."
+        },
+        {
+          name: "Cursor rules (.mdc)",
+          what: "Cursor IDE rule files with glob-based activation.",
+          how: "Each .mdc file is tagged with file path globs (like `src/components/footer/**`). When a matching file is open or referenced, the rule loads automatically.",
+          usp: "File-path-aware. Every part of the codebase can carry its own rules.",
+          doesnt: "Trigger on prompt keywords. Activation is file-path only."
+        },
+        {
+          name: "Aider repo-map",
+          what: "Automatic codebase summarisation.",
+          how: "Aider builds a compressed map of function signatures and imports, then pulls relevant fragments based on the files being edited or the task at hand.",
+          usp: "Keeps context bounded as the codebase grows \u2014 the map replaces dumping the whole repo.",
+          doesnt: "Work outside codebases. It\u2019s specifically for coding tasks."
+        }
+      ].map((t, i) => e(PixelCard, { key: i, style: { padding: "5px 10px" }},
+        e("div", { style: { color: "#fff", fontWeight: 700, fontSize: 12, fontFamily: "monospace", marginBottom: 1 }}, t.name),
+        e("div", { style: { color: "#ccc", fontSize: 10, lineHeight: 1.35 }},
+          e("span", { style: { color: "#ffd93d", fontWeight: 700 }}, "What: "), t.what
+        ),
+        e("div", { style: { color: "#ccc", fontSize: 10, lineHeight: 1.35 }},
+          e("span", { style: { color: "#ffd93d", fontWeight: 700 }}, "How: "), t.how
+        ),
+        e("div", { style: { color: "#4ade80", fontSize: 10, lineHeight: 1.35 }},
+          e("span", { style: { fontWeight: 700 }}, "Why: "), t.usp
+        ),
+        e("div", { style: { color: "#ff9a9a", fontSize: 10, lineHeight: 1.35 }},
+          e("span", { style: { fontWeight: 700 }}, "Doesn\u2019t: "), t.doesnt
+        )
+      ))
+    ),
+    e("div", { style: { color: "#aaa", fontSize: 10, fontStyle: "italic", marginTop: 6, textAlign: "center" }}, "Pull-at-the-right-moment tools. They stack on top of memory stores \u2014 not a replacement.")
+  ),
+
+  // 25 - Auto Dream
+  () => e("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 14 }},
+    e(Label, { color: "#64ffda" }, "SOMETHING I\u2019M WATCHING"),
+    e("div", { style: { fontSize: 30, fontWeight: 700, color: "#fff", fontFamily: "monospace" }}, "Auto Dream"),
+    e("div", { style: { color: "#64ffda", fontSize: 13, fontStyle: "italic" }}, "Native memory consolidation \u2014 like REM sleep"),
+    e("div", { style: { display: "flex", gap: 10, marginTop: 14, width: "100%" }},
+      [
+        { n: "1", title: "Session ends", desc: "Agent goes offline", color: "#888" },
+        { n: "2", title: "Garbage\ncollection", desc: "Prunes weak links", color: "#ffd93d" },
+        { n: "3", title: "Consolidation", desc: "Rewrites memory", color: "#64ffda" },
+        { n: "4", title: "Morning\nsession", desc: "Pre-focused", color: "#4ade80" }
+      ].map((s, i) => e("div", { key: i, style: { flex: 1, display: "flex", alignItems: "center" }},
+        e(PixelCard, { style: { flex: 1, textAlign: "center", padding: "12px 8px" }},
+          e("div", { style: { color: s.color, fontSize: 22, fontWeight: 700, fontFamily: "monospace" }}, s.n),
+          e("div", { style: { color: "#fff", fontSize: 11, fontWeight: 700, whiteSpace: "pre-line", lineHeight: 1.3, marginTop: 6 }}, s.title),
+          e("div", { style: { color: "#888", fontSize: 10, marginTop: 6 }}, s.desc)
+        ),
+        i < 3 ? e("span", { style: { color: "#444", margin: "0 4px", fontFamily: "monospace", fontSize: 16 }}, "\u2192") : null
+      ))
+    ),
+    e("div", { style: { color: "#ffd93d", fontWeight: 700, fontSize: 13, marginTop: 14, textAlign: "center", maxWidth: 640 }}, "If models start consolidating on their own, how much of this infrastructure becomes obsolete?")
+  ),
+
+  // 26 - Open questions
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e(Label, { color: "#ffd93d" }, "OPEN QUESTIONS"),
+    e("div", { style: { color: "#fff", fontSize: 22, fontWeight: 700, marginTop: 8, marginBottom: 14 }}, "Things I haven\u2019t answered"),
+    e("div", { style: { display: "flex", flexDirection: "column", gap: 10, flex: 1, justifyContent: "center" }},
+      [
+        "I haven\u2019t run a controlled experiment separating tooling from hygiene. Maybe my process is the bottleneck and the tools are fine.",
+        "I don\u2019t know yet whether Supermemory replaces session commands or just lightens them.",
+        "Amnesia, context rot, and recency bias feel distinct \u2014 but they might be the same root cause at different scales."
+      ].map((q, i) => e(PixelCard, { key: i, style: { borderLeftWidth: 3, borderLeftColor: "#ffd93d", padding: "10px 14px" }},
+        e("div", { style: { color: "#ccc", fontSize: 13, lineHeight: 1.5 }}, q)
+      ))
+    )
+  ),
+
+  // 27 - What I'm trying next
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "24px 0" }},
+    e(Label, { color: "#4ade80" }, "CURRENT STATE OF PLAY"),
+    e("div", { style: { color: "#fff", fontSize: 22, fontWeight: 700, marginTop: 8, marginBottom: 14 }}, "Where I\u2019m at"),
+    e("div", { style: { display: "flex", flexDirection: "column", gap: 12, flex: 1, justifyContent: "center" }},
+      [
+        { label: "TRIAL", text: "Run Supermemory on one live project for one month. Subjectively measured against the memory.md baseline." },
+        { label: "EXPERIMENT", text: "Isolate tooling from hygiene. Thirty days on the current setup. See if the problems were ever tool-shaped." },
+        { label: "BUILD", text: "Pre-tool-use hooks plus a compact constitution.md for context rot." },
+        { label: "WATCH", text: "Auto Dream \u2014 whatever the vendors call it when they ship it." }
+      ].map((r, i) => e(PixelCard, { key: i, style: { display: "flex", gap: 16, padding: "10px 14px", borderLeftColor: "#4ade80", borderLeftWidth: 3 }},
+        e("div", { style: { color: "#4ade80", fontWeight: 700, fontSize: 11, letterSpacing: 2, minWidth: 110 }}, r.label),
+        e("div", { style: { color: "#ccc", fontSize: 13, lineHeight: 1.5 }}, r.text)
+      ))
+    )
+  ),
+
+  // 28 - Closing
+  () => e("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 18 }},
+    e("div", { style: { display: "flex", gap: 8 }},
+      [0,1,2].map(i => e("div", { key: i, style: { width: 24 + i * 24, height: 24 + i * 24, border: "2px solid hsla(" + (180+i*20) + ", 60%, 50%, " + (0.15+i*0.05) + ")" }}))
+    ),
+    e("div", { style: { fontSize: 42, fontWeight: 700, color: "#fff", fontFamily: "monospace", textAlign: "center", lineHeight: 1.1, textShadow: "3px 3px 0 #1a1a2e" }},
+      "FOCUS THE", e("br"), "APERTURE"
+    ),
+    e(PixelDivider),
+    e("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }},
+      [
+        { text: "Restrict context \u2192 make amnesia easier", color: "#64ffda" },
+        { text: "Inject deterministic hooks \u2192 fight attention decay", color: "#ffd93d" },
+        { text: "Deploy external checkers \u2192 override pattern matching", color: "#ff6b6b" },
+        { text: "Start simple. Prove the problem. Then build up.", color: "#4ade80" }
+      ].map((t, i) => e("div", { key: i, style: { color: t.color, fontSize: 14, fontWeight: 700, fontFamily: "monospace", textAlign: "center" }}, t.text))
+    )
+  ),
+
+  // 19 - Intermission: Pac-Man
+  () => e("div", { style: { display: "flex", flexDirection: "column", height: "100%", padding: "16px 0", position: "relative" }},
+    e("style", { key: "kf", dangerouslySetInnerHTML: { __html:
+      "@keyframes pacLoop1 { 0% { transform: translate(0,0); } 25% { transform: translate(760px,0); } 50% { transform: translate(760px,200px); } 75% { transform: translate(0,200px); } 100% { transform: translate(0,0); } } " +
+      "@keyframes pacLoop2 { 0% { transform: translate(0,0); } 15% { transform: translate(300px,100px); } 48% { transform: translate(300px,100px); } 62% { transform: translate(580px,100px); } 78% { transform: translate(580px,-10px); } 100% { transform: translate(0,0); } } " +
+      "@keyframes pacLoop3 { 0% { transform: translate(0,0); } 25% { transform: translate(300px,0); } 50% { transform: translate(300px,150px); } 75% { transform: translate(0,150px); } 100% { transform: translate(0,0); } } " +
+      "@keyframes pacLoop4 { 0% { transform: translate(0,0); } 25% { transform: translate(200px,0); } 50% { transform: translate(200px,100px); } 75% { transform: translate(0,100px); } 100% { transform: translate(0,0); } } " +
+      "@keyframes tearFall { 0% { opacity: 0; transform: translateY(0); } 10% { opacity: 1; } 85% { opacity: 1; transform: translateY(42px); } 92% { opacity: 0; transform: translateY(42px); } 100% { opacity: 0; transform: translateY(42px); } } " +
+      "@keyframes tearSplash { 0%, 78% { opacity: 0; transform: scaleX(0.2); } 85% { opacity: 1; transform: scaleX(1); } 94% { opacity: 0.5; transform: scaleX(1.6); } 100% { opacity: 0; transform: scaleX(1.6); } } " +
+      "@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } } " +
+      "@keyframes burstN  { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(0,-6px); } 70% { opacity: 0.9; transform: translate(0,-36px); } 100% { opacity: 0; transform: translate(0,-42px); } } " +
+      "@keyframes burstNE { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(4px,-4px); } 70% { opacity: 0.9; transform: translate(26px,-26px); } 100% { opacity: 0; transform: translate(30px,-30px); } } " +
+      "@keyframes burstE  { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(6px,0); } 70% { opacity: 0.9; transform: translate(36px,0); } 100% { opacity: 0; transform: translate(42px,0); } } " +
+      "@keyframes burstSE { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(4px,4px); } 70% { opacity: 0.9; transform: translate(26px,26px); } 100% { opacity: 0; transform: translate(30px,30px); } } " +
+      "@keyframes burstS  { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(0,6px); } 70% { opacity: 0.9; transform: translate(0,36px); } 100% { opacity: 0; transform: translate(0,42px); } } " +
+      "@keyframes burstSW { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(-4px,4px); } 70% { opacity: 0.9; transform: translate(-26px,26px); } 100% { opacity: 0; transform: translate(-30px,30px); } } " +
+      "@keyframes burstW  { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(-6px,0); } 70% { opacity: 0.9; transform: translate(-36px,0); } 100% { opacity: 0; transform: translate(-42px,0); } } " +
+      "@keyframes burstNW { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(-4px,-4px); } 70% { opacity: 0.9; transform: translate(-26px,-26px); } 100% { opacity: 0; transform: translate(-30px,-30px); } } " +
+      "@keyframes soundWave { 0% { opacity: 0; transform: translateX(0) scale(0.4); } 12% { opacity: 1; transform: translateX(8px) scale(1.2); } 75% { opacity: 0.9; transform: translateX(72px) scale(1.7); } 100% { opacity: 0; transform: translateX(84px) scale(1.4); } } " +
+      "@keyframes turntableSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } } " +
+      "@keyframes soundWaveShort { 0% { opacity: 0; transform: translateX(0) scale(0.5); } 15% { opacity: 1; transform: translateX(3px) scale(1); } 70% { opacity: 0.6; transform: translateX(14px); } 100% { opacity: 0; transform: translateX(18px); } } " +
+      "@keyframes particleFly { 0%, 10% { opacity: 0; transform: translate(0, 0); } 18% { opacity: 1; transform: translate(calc(var(--dx) * 0.25), calc(var(--dy) * 0.25)); } 70% { opacity: 0.9; transform: translate(var(--dx), var(--dy)); } 100% { opacity: 0; transform: translate(calc(var(--dx) * 1.1), calc(var(--dy) * 1.1)); } } " +
+      "@keyframes burstNNE { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(3px,-8px); } 70% { opacity: 0.9; transform: translate(13px,-32px); } 100% { opacity: 0; transform: translate(15px,-36px); } } " +
+      "@keyframes burstENE { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(8px,-3px); } 70% { opacity: 0.9; transform: translate(32px,-13px); } 100% { opacity: 0; transform: translate(36px,-15px); } } " +
+      "@keyframes burstESE { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(8px,3px); } 70% { opacity: 0.9; transform: translate(32px,13px); } 100% { opacity: 0; transform: translate(36px,15px); } } " +
+      "@keyframes burstSSE { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(3px,8px); } 70% { opacity: 0.9; transform: translate(13px,32px); } 100% { opacity: 0; transform: translate(15px,36px); } } " +
+      "@keyframes burstSSW { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(-3px,8px); } 70% { opacity: 0.9; transform: translate(-13px,32px); } 100% { opacity: 0; transform: translate(-15px,36px); } } " +
+      "@keyframes burstWSW { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(-8px,3px); } 70% { opacity: 0.9; transform: translate(-32px,13px); } 100% { opacity: 0; transform: translate(-36px,15px); } } " +
+      "@keyframes burstWNW { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(-8px,-3px); } 70% { opacity: 0.9; transform: translate(-32px,-13px); } 100% { opacity: 0; transform: translate(-36px,-15px); } } " +
+      "@keyframes burstNNW { 0% { opacity: 0; transform: translate(0,0); } 15% { opacity: 1; transform: translate(-3px,-8px); } 70% { opacity: 0.9; transform: translate(-13px,-32px); } 100% { opacity: 0; transform: translate(-15px,-36px); } } " +
+      "@keyframes burstFlash { 0% { opacity: 0; transform: scale(0.3); } 12% { opacity: 1; transform: scale(1.8); } 25% { opacity: 0.9; transform: scale(1.4); } 45% { opacity: 0.4; transform: scale(1); } 100% { opacity: 0; transform: scale(0.8); } } " +
+      "@keyframes splashUpC { 0%, 78% { opacity: 0; transform: translate(0, 0); } 83% { opacity: 1; transform: translate(0, -9px); } 92% { opacity: 0.6; transform: translate(0, -4px); } 100% { opacity: 0; transform: translate(0, 2px); } } " +
+      "@keyframes splashUpL { 0%, 78% { opacity: 0; transform: translate(0, 0); } 83% { opacity: 1; transform: translate(-6px, -8px); } 92% { opacity: 0.6; transform: translate(-10px, -3px); } 100% { opacity: 0; transform: translate(-12px, 2px); } } " +
+      "@keyframes splashUpR { 0%, 78% { opacity: 0; transform: translate(0, 0); } 83% { opacity: 1; transform: translate(6px, -8px); } 92% { opacity: 0.6; transform: translate(10px, -3px); } 100% { opacity: 0; transform: translate(12px, 2px); } } " +
+      "@keyframes ledPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } } " +
+      "@keyframes figPath1 { 0% { transform: translate(0,0); } 25% { transform: translate(500px,0); } 50% { transform: translate(500px,140px); } 75% { transform: translate(0,140px); } 100% { transform: translate(0,0); } } " +
+      "@keyframes figPath2 { 0% { transform: translate(0,0); } 25% { transform: translate(-350px,0); } 50% { transform: translate(-350px,180px); } 75% { transform: translate(0,180px); } 100% { transform: translate(0,0); } } " +
+      "@keyframes figPath3 { 0% { transform: translate(0,0); } 25% { transform: translate(400px,0); } 50% { transform: translate(400px,100px); } 75% { transform: translate(0,100px); } 100% { transform: translate(0,0); } } " +
+      "@keyframes figPath4 { 0% { transform: translate(0,0); } 25% { transform: translate(-250px,0); } 50% { transform: translate(-250px,120px); } 75% { transform: translate(0,120px); } 100% { transform: translate(0,0); } } " +
+      "@keyframes figPath5 { 0% { transform: translate(0,0); } 25% { transform: translate(150px,0); } 50% { transform: translate(150px,140px); } 75% { transform: translate(0,140px); } 100% { transform: translate(0,0); } } " +
+      "@keyframes figIntro { 0% { opacity: 0; transform: translate(var(--inX, -80px), var(--inY, 0px)); } 15% { opacity: 1; } 100% { opacity: 1; transform: translate(0, 0); } } " +
+      "@keyframes bubbleShow { 0%, 14% { opacity: 0; transform: translate(0, 4px); } 16% { opacity: 1; transform: translate(0, 0); } 46% { opacity: 1; transform: translate(0, 0); } 48% { opacity: 0; transform: translate(0, -3px); } 100% { opacity: 0; transform: translate(0, -3px); } } " +
+      "@keyframes catWalk { 0% { transform: translate(0,0); } 32% { transform: translate(732px,0); } 35% { transform: translate(740px,6px); } 40% { transform: translate(758px,-30px); } 45% { transform: translate(782px,-80px); } 50% { transform: translate(810px,-120px); } 55% { transform: translate(830px,-112px) scaleY(1) rotate(0deg); } 65% { transform: translate(830px,-108px) scaleY(0.55) rotate(0deg); } 100% { transform: translate(830px,-108px) scaleY(0.55) rotate(0deg); } } " +
+      "@keyframes laserA2 { 0% { opacity: 0; transform: rotate(14deg); } 5% { opacity: 0.9; } 45% { opacity: 0.95; transform: rotate(35deg); } 80% { opacity: 0.9; transform: rotate(14deg); } 88% { opacity: 0; } 100% { opacity: 0; transform: rotate(14deg); } } " +
+      "@keyframes laserC { 0% { opacity: 0; transform: rotate(18deg); } 6% { opacity: 0.9; } 50% { opacity: 0.95; transform: rotate(38deg); } 78% { opacity: 0.9; transform: rotate(18deg); } 85% { opacity: 0; } 100% { opacity: 0; transform: rotate(18deg); } } " +
+      "@keyframes laserD { 0% { opacity: 0; transform: rotate(14deg); } 5% { opacity: 0.9; } 45% { opacity: 0.95; transform: rotate(35deg); } 80% { opacity: 0.9; transform: rotate(14deg); } 88% { opacity: 0; } 100% { opacity: 0; transform: rotate(14deg); } } " +
+      "@keyframes laserE { 0% { opacity: 0; transform: rotate(-2deg); } 8% { opacity: 0.9; } 50% { opacity: 0.95; transform: rotate(-24deg); } 80% { opacity: 0.9; transform: rotate(-2deg); } 90% { opacity: 0; } 100% { opacity: 0; transform: rotate(-2deg); } } " +
+      "@keyframes laserF { 0% { opacity: 0; transform: rotate(110deg); } 6% { opacity: 0.9; } 50% { opacity: 0.95; transform: rotate(155deg); } 80% { opacity: 0.9; transform: rotate(110deg); } 88% { opacity: 0; } 100% { opacity: 0; transform: rotate(110deg); } } " +
+      "@keyframes laserG { 0% { opacity: 0; transform: rotate(25deg); } 6% { opacity: 0.9; } 50% { opacity: 0.95; transform: rotate(70deg); } 80% { opacity: 0.9; transform: rotate(25deg); } 88% { opacity: 0; } 100% { opacity: 0; transform: rotate(25deg); } } " +
+      "@keyframes soundWaveLeft { 0% { opacity: 0; transform: translateX(0) scale(0.4); } 12% { opacity: 1; transform: translateX(-8px) scale(1.2); } 75% { opacity: 0.9; transform: translateX(-72px) scale(1.7); } 100% { opacity: 0; transform: translateX(-84px) scale(1.4); } } " +
+      "@keyframes catTail { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-8deg); } } " +
+      "@keyframes laserA { 0% { opacity: 0; transform: rotate(18deg); } 6% { opacity: 0.9; } 50% { opacity: 0.95; transform: rotate(38deg); } 78% { opacity: 0.9; transform: rotate(18deg); } 85% { opacity: 0; } 100% { opacity: 0; transform: rotate(18deg); } } " +
+      "@keyframes laserB { 0% { opacity: 0; transform: rotate(-2deg); } 8% { opacity: 0.9; } 50% { opacity: 0.95; transform: rotate(-24deg); } 80% { opacity: 0.9; transform: rotate(-2deg); } 90% { opacity: 0; } 100% { opacity: 0; transform: rotate(-2deg); } }"
+    }}),
+    e("div", { style: { color: "#fff", fontSize: 16, fontWeight: 700, marginTop: 4, marginBottom: 8 }}, "Everyone is allowed to party except for one."),
+    e("div", { style: {
+      position: "relative", flex: 1,
+      background: "#0a0a1a",
+      border: "3px solid #1e40af",
+      overflow: "hidden"
+    }},
+      e("div", { key: "w1", style: { position: "absolute", left: 120, top: 50, width: 100, height: 14, background: "#1e40af" }}),
+      e("div", { key: "w2", style: { position: "absolute", left: 320, top: 50, width: 140, height: 14, background: "#1e40af" }}),
+      e("div", { key: "w3", style: { position: "absolute", left: 560, top: 50, width: 100, height: 14, background: "#1e40af" }}),
+      e("div", { key: "w4", style: { position: "absolute", left: 120, top: 140, width: 14, height: 100, background: "#1e40af" }}),
+      e("div", { key: "w5", style: { position: "absolute", left: 700, top: 140, width: 14, height: 100, background: "#1e40af" }}),
+      e("div", { key: "w6", style: { position: "absolute", left: 340, top: 160, width: 120, height: 14, background: "#1e40af" }}),
+      e("div", { key: "w7", style: { position: "absolute", left: 340, top: 230, width: 120, height: 14, background: "#1e40af" }}),
+      e("div", { key: "w8", style: { position: "absolute", left: 200, top: 320, width: 100, height: 14, background: "#1e40af" }}),
+      e("div", { key: "w9", style: { position: "absolute", left: 480, top: 320, width: 100, height: 14, background: "#1e40af" }}),
+      Array.from({ length: 50 }).map((_, i) => {
+        const x = 50 + (i % 10) * 80;
+        const y = 90 + Math.floor(i / 10) * 70;
+        if (x >= 720 && y >= 280) return null;
+        return e("div", { key: "dot" + i, style: {
+          position: "absolute", left: x, top: y, width: 5, height: 5,
+          borderRadius: "50%", background: "#ffd93d", opacity: 0.8,
+          animation: "blink 2s ease-in-out infinite",
+          animationDelay: (i * 0.1) + "s"
+        }});
+      }),
+      e("div", { key: "ch1", style: { position: "absolute", left: 40, top: 25, width: 14, height: 14, borderRadius: "50%", background: "#ff6b6b", boxShadow: "0 0 6px #ff6b6b" }}),
+      e("div", { key: "ch2", style: { position: "absolute", left: 830, top: 25, width: 14, height: 14, borderRadius: "50%", background: "#ff6b6b", boxShadow: "0 0 6px #ff6b6b" }}),
+      e("div", { key: "ch3", style: { position: "absolute", left: 410, top: 195, width: 14, height: 14, borderRadius: "50%", background: "#ff6b6b", boxShadow: "0 0 6px #ff6b6b" }}),
+      e("div", { key: "ch4", style: { position: "absolute", left: 40, top: 360, width: 14, height: 14, borderRadius: "50%", background: "#ff6b6b", boxShadow: "0 0 6px #ff6b6b" }}),
+      e("div", { key: "tt-base-l", style: { position: "absolute", left: 336, top: 332, width: 28, height: 28, background: "#0a0a0a", border: "1px solid #444", borderRadius: "50%" }}),
+      e("div", { key: "tt-plat-l", style: { position: "absolute", left: 339, top: 335, width: 22, height: 22, background: "#1a1a1a", borderRadius: "50%" }}),
+      e("div", { key: "tt-label-l", style: { position: "absolute", left: 344, top: 340, width: 12, height: 12, background: "#e84a5f", borderRadius: "50%", animation: "turntableSpin 2.5s linear 3s infinite" }},
+        e("div", { key: "mark", style: { position: "absolute", left: 5, top: 0, width: 2, height: 3, background: "#fff" }})
+      ),
+      e("div", { key: "tt-spindle-l", style: { position: "absolute", left: 349, top: 345, width: 2, height: 2, background: "#ccc", borderRadius: "50%" }}),
+      e("div", { key: "tt-base-r", style: { position: "absolute", left: 396, top: 332, width: 28, height: 28, background: "#0a0a0a", border: "1px solid #444", borderRadius: "50%" }}),
+      e("div", { key: "tt-plat-r", style: { position: "absolute", left: 399, top: 335, width: 22, height: 22, background: "#1a1a1a", borderRadius: "50%" }}),
+      e("div", { key: "tt-label-r", style: { position: "absolute", left: 404, top: 340, width: 12, height: 12, background: "#ffd93d", borderRadius: "50%", animation: "turntableSpin 3s linear 3s infinite" }},
+        e("div", { key: "mark", style: { position: "absolute", left: 5, top: 0, width: 2, height: 3, background: "#1a1a1a" }})
+      ),
+      e("div", { key: "tt-spindle-r", style: { position: "absolute", left: 409, top: 345, width: 2, height: 2, background: "#ccc", borderRadius: "50%" }}),
+      e("div", { key: "mx-body", style: { position: "absolute", left: 366, top: 332, width: 28, height: 28, background: "#2a2a2a", border: "1px solid #555" }}),
+      e("div", { key: "mx-top", style: { position: "absolute", left: 368, top: 334, width: 24, height: 8, background: "#1a1a1a" }}),
+      e("div", { key: "mx-k1", style: { position: "absolute", left: 370, top: 336, width: 3, height: 3, background: "#888", borderRadius: "50%" }}),
+      e("div", { key: "mx-k2", style: { position: "absolute", left: 378, top: 336, width: 3, height: 3, background: "#888", borderRadius: "50%" }}),
+      e("div", { key: "mx-k3", style: { position: "absolute", left: 386, top: 336, width: 3, height: 3, background: "#888", borderRadius: "50%" }}),
+      e("div", { key: "mx-f1", style: { position: "absolute", left: 371, top: 344, width: 2, height: 12, background: "#555" }}),
+      e("div", { key: "mx-f2", style: { position: "absolute", left: 379, top: 344, width: 2, height: 12, background: "#555" }}),
+      e("div", { key: "mx-f3", style: { position: "absolute", left: 387, top: 344, width: 2, height: 12, background: "#555" }}),
+      e("div", { key: "mx-fh1", style: { position: "absolute", left: 370, top: 348, width: 4, height: 2, background: "#ccc" }}),
+      e("div", { key: "mx-fh2", style: { position: "absolute", left: 378, top: 346, width: 4, height: 2, background: "#ccc" }}),
+      e("div", { key: "mx-fh3", style: { position: "absolute", left: 386, top: 350, width: 4, height: 2, background: "#ccc" }}),
+      e("div", { key: "mx-led", style: { position: "absolute", left: 388, top: 356, width: 2, height: 2, background: "#4ade80", boxShadow: "0 0 3px #4ade80", animation: "ledPulse 1s ease-in-out infinite" }}),
+      e("div", { key: "vbubble", style: {
+        position: "absolute", left: 298, top: 248, width: 148, padding: "5px 8px",
+        background: "#ffffff", border: "2px solid #000",
+        fontFamily: "monospace", fontSize: 10, fontWeight: 700, color: "#000",
+        textAlign: "center", letterSpacing: 0.5, lineHeight: 1.2,
+        opacity: 0,
+        animation: "bubbleShow 12s linear 3s infinite",
+        pointerEvents: "none", zIndex: 5
+      }}, "freaky motherfucker"),
+      e("div", { key: "vbubble-tail", style: {
+        position: "absolute", left: 368, top: 276, width: 8, height: 8,
+        background: "#ffffff",
+        borderRight: "2px solid #000",
+        borderBottom: "2px solid #000",
+        transform: "rotate(45deg)",
+        opacity: 0,
+        animation: "bubbleShow 12s linear 3s infinite",
+        pointerEvents: "none", zIndex: 5
+      }}),
+      e("div", { key: "laserA", style: {
+        position: "absolute", left: 24, top: 40, width: 900, height: 2,
+        background: "linear-gradient(to right, rgba(0,255,80,0.95), rgba(0,255,80,0.15) 60%, rgba(0,255,80,0))",
+        transformOrigin: "0% 50%",
+        opacity: 0,
+        animation: "laserA 9s ease-in-out 13s infinite",
+        boxShadow: "0 0 8px rgba(0,255,80,0.7)",
+        pointerEvents: "none"
+      }}),
+      e("div", { key: "laserB", style: {
+        position: "absolute", left: 24, top: 345, width: 900, height: 2,
+        background: "linear-gradient(to right, rgba(0,255,80,0.95), rgba(0,255,80,0.15) 60%, rgba(0,255,80,0))",
+        transformOrigin: "0% 50%",
+        opacity: 0,
+        animation: "laserB 11s ease-in-out 13s infinite",
+        boxShadow: "0 0 8px rgba(0,255,80,0.7)",
+        pointerEvents: "none"
+      }}),
+      e("div", { key: "laserA2", style: {
+        position: "absolute", left: 24, top: 70, width: 900, height: 2,
+        background: "linear-gradient(to right, rgba(0,255,80,0.95), rgba(0,255,80,0.15) 60%, rgba(0,255,80,0))",
+        transformOrigin: "0% 50%",
+        opacity: 0,
+        animation: "laserA2 10s ease-in-out 13s infinite",
+        boxShadow: "0 0 8px rgba(0,255,80,0.7)",
+        pointerEvents: "none"
+      }}),
+      e("div", { key: "laserC", style: {
+        position: "absolute", left: -36, top: 40, width: 900, height: 2,
+        background: "linear-gradient(to left, rgba(0,255,80,0.95), rgba(0,255,80,0.15) 60%, rgba(0,255,80,0))",
+        transformOrigin: "100% 50%",
+        opacity: 0,
+        animation: "laserC 9s ease-in-out 13s infinite",
+        boxShadow: "0 0 8px rgba(0,255,80,0.7)",
+        pointerEvents: "none"
+      }}),
+      e("div", { key: "laserD", style: {
+        position: "absolute", left: -36, top: 70, width: 900, height: 2,
+        background: "linear-gradient(to left, rgba(0,255,80,0.95), rgba(0,255,80,0.15) 60%, rgba(0,255,80,0))",
+        transformOrigin: "100% 50%",
+        opacity: 0,
+        animation: "laserD 11s ease-in-out 13s infinite",
+        boxShadow: "0 0 8px rgba(0,255,80,0.7)",
+        pointerEvents: "none"
+      }}),
+      e("div", { key: "laserE", style: {
+        position: "absolute", left: -36, top: 345, width: 900, height: 2,
+        background: "linear-gradient(to left, rgba(0,255,80,0.95), rgba(0,255,80,0.15) 60%, rgba(0,255,80,0))",
+        transformOrigin: "100% 50%",
+        opacity: 0,
+        animation: "laserE 10s ease-in-out 13s infinite",
+        boxShadow: "0 0 8px rgba(0,255,80,0.7)",
+        pointerEvents: "none"
+      }}),
+      e("div", { key: "laserF", style: {
+        position: "absolute", left: 370, top: 280, width: 900, height: 2,
+        background: "linear-gradient(to right, rgba(0,255,80,0.95), rgba(0,255,80,0.15) 60%, rgba(0,255,80,0))",
+        transformOrigin: "0% 50%",
+        opacity: 0,
+        animation: "laserF 9s ease-in-out 13s infinite",
+        boxShadow: "0 0 8px rgba(0,255,80,0.7)",
+        pointerEvents: "none"
+      }}),
+      e("div", { key: "laserG", style: {
+        position: "absolute", left: 385, top: 275, width: 900, height: 2,
+        background: "linear-gradient(to right, rgba(0,255,80,0.95), rgba(0,255,80,0.15) 60%, rgba(0,255,80,0))",
+        transformOrigin: "0% 50%",
+        opacity: 0,
+        animation: "laserG 11s ease-in-out 13s infinite",
+        boxShadow: "0 0 8px rgba(0,255,80,0.7)",
+        pointerEvents: "none"
+      }}),
+      e("div", { key: "cat", style: {
+        position: "absolute", left: -60, top: 370, width: 56, height: 32,
+        transformOrigin: "center bottom",
+        animation: "catWalk 15s ease-in-out 8s 1 forwards",
+        pointerEvents: "none"
+      }},
+        e("div", { key: "c-tail1",  style: { position: "absolute", left: 0,  top: 8,  width: 6,  height: 4, background: "#d97b2a" }}),
+        e("div", { key: "c-tail2",  style: { position: "absolute", left: 0,  top: 4,  width: 4,  height: 4, background: "#d97b2a" }}),
+        e("div", { key: "c-tail3",  style: { position: "absolute", left: 2,  top: 0,  width: 4,  height: 4, background: "#d97b2a" }}),
+        e("div", { key: "c-body",   style: { position: "absolute", left: 6,  top: 10, width: 30, height: 12, background: "#d97b2a" }}),
+        e("div", { key: "c-s1",     style: { position: "absolute", left: 10, top: 12, width: 2,  height: 4, background: "#8a4a15" }}),
+        e("div", { key: "c-s2",     style: { position: "absolute", left: 16, top: 12, width: 2,  height: 4, background: "#8a4a15" }}),
+        e("div", { key: "c-s3",     style: { position: "absolute", left: 22, top: 12, width: 2,  height: 4, background: "#8a4a15" }}),
+        e("div", { key: "c-s4",     style: { position: "absolute", left: 28, top: 12, width: 2,  height: 4, background: "#8a4a15" }}),
+        e("div", { key: "c-belly",  style: { position: "absolute", left: 8,  top: 18, width: 28, height: 4, background: "#f4b068" }}),
+        e("div", { key: "c-head",   style: { position: "absolute", left: 34, top: 4,  width: 16, height: 16, background: "#d97b2a" }}),
+        e("div", { key: "c-earl",   style: { position: "absolute", left: 34, top: 0,  width: 4,  height: 4, background: "#d97b2a" }}),
+        e("div", { key: "c-earr",   style: { position: "absolute", left: 46, top: 0,  width: 4,  height: 4, background: "#d97b2a" }}),
+        e("div", { key: "c-earil",  style: { position: "absolute", left: 35, top: 2,  width: 2,  height: 2, background: "#ff9a9a" }}),
+        e("div", { key: "c-earir",  style: { position: "absolute", left: 47, top: 2,  width: 2,  height: 2, background: "#ff9a9a" }}),
+        e("div", { key: "c-eye",    style: { position: "absolute", left: 42, top: 8,  width: 4,  height: 4, background: "#4ade80" }}),
+        e("div", { key: "c-pupil",  style: { position: "absolute", left: 44, top: 8,  width: 2,  height: 4, background: "#000" }}),
+        e("div", { key: "c-nose",   style: { position: "absolute", left: 48, top: 12, width: 2,  height: 2, background: "#ff6b9d" }}),
+        e("div", { key: "c-sm1",    style: { position: "absolute", left: 36, top: 14, width: 2,  height: 2, background: "#1a1a1a" }}),
+        e("div", { key: "c-sm2",    style: { position: "absolute", left: 48, top: 14, width: 2,  height: 2, background: "#1a1a1a" }}),
+        e("div", { key: "c-sm3",    style: { position: "absolute", left: 36, top: 16, width: 14, height: 2, background: "#1a1a1a" }}),
+        e("div", { key: "c-sm4",    style: { position: "absolute", left: 38, top: 18, width: 10, height: 1, background: "#fff" }}),
+        e("div", { key: "c-sm5",    style: { position: "absolute", left: 38, top: 19, width: 10, height: 1, background: "#1a1a1a" }}),
+        e("div", { key: "c-wh",     style: { position: "absolute", left: 50, top: 13, width: 6,  height: 1, background: "#fff" }}),
+        e("div", { key: "c-wh2",    style: { position: "absolute", left: 50, top: 15, width: 6,  height: 1, background: "#fff" }}),
+        e("div", { key: "c-bleg1",  style: { position: "absolute", left: 10, top: 22, width: 2,  height: 10, background: "#d97b2a" }}),
+        e("div", { key: "c-bleg2",  style: { position: "absolute", left: 16, top: 22, width: 2,  height: 10, background: "#d97b2a" }}),
+        e("div", { key: "c-fleg1",  style: { position: "absolute", left: 30, top: 22, width: 2,  height: 10, background: "#d97b2a" }}),
+        e("div", { key: "c-fleg2",  style: { position: "absolute", left: 36, top: 22, width: 2,  height: 10, background: "#d97b2a" }})
+      ),
+      [
+        { x: 150, y: 80,  delay: 0,   shape: "radial",    palette: ["#ff6b9d","#ffd93d","#fff","#c084fc"] },
+        { x: 420, y: 55,  delay: 0.5, shape: "snowflake", palette: ["#64ffda","#fff","#a0e7ff","#d0f0ff"] },
+        { x: 640, y: 130, delay: 1.0, shape: "ring",      palette: ["#ffd93d","#ff9a3c","#ff6b9d","#fff"] },
+        { x: 260, y: 240, delay: 1.5, shape: "star",      palette: ["#fff","#ffd93d","#ff6b6b","#4ade80"] },
+        { x: 540, y: 260, delay: 2.0, shape: "dense",     palette: ["#c084fc","#ff6b9d","#64ffda","#fff"] },
+        { x: 340, y: 110, delay: 2.4, shape: "radial",    palette: ["#4ade80","#fff","#64ffda","#ffd93d"] },
+        { x: 560, y: 90,  delay: 0.3, shape: "snowflake", palette: ["#a0e7ff","#fff","#c084fc","#64ffda"] },
+        { x: 90,  y: 230, delay: 1.7, shape: "star",      palette: ["#ffd93d","#ff9a3c","#fff","#ff6b9d"] },
+        { x: 680, y: 220, delay: 2.7, shape: "ring",      palette: ["#ff6b9d","#fff","#c084fc","#4ade80"] }
+      ].flatMap((b, bi) => {
+        const particles = dirsFor(b.shape);
+        return [
+          e("div", { key: "flash" + bi, style: {
+            position: "absolute", left: b.x - 4, top: b.y - 4, width: 8, height: 8,
+            background: "#ffffff", boxShadow: "0 0 10px #ffffff",
+            opacity: 0,
+            animation: "burstFlash 3s ease-out infinite", animationDelay: (b.delay + 7) + "s",
+            pointerEvents: "none"
+          }})
+        ].concat(particles.map((p, pi) => e("div", {
+          key: "pp" + bi + "_" + pi,
+          style: {
+            position: "absolute",
+            left: b.x - p.s / 2,
+            top: b.y - p.s / 2,
+            width: p.s,
+            height: p.s,
+            background: b.palette[pi % b.palette.length],
+            opacity: 0,
+            animation: "particleFly 3s ease-out infinite",
+            animationDelay: (b.delay + 7) + "s",
+            pointerEvents: "none",
+            "--dx": p.dx + "px",
+            "--dy": p.dy + "px"
+          }
+        })));
+      }),
+      [
+        { id: "w1", bx: 60,  by: 80,  hair: "#f4d47b", dark: "#c9a85c", dress: "#5db3f0", trim: "#2a6a9a", crown: null,      path: "figPath1", dur: 14, intro: 17 },
+        { id: "w2", bx: 500, by: 60,  hair: "#edc56a", dark: "#b89550", dress: "#e84a5f", trim: "#8a1f30", crown: null,      path: "figPath2", dur: 16, intro: 18 },
+        { id: "w3", bx: 50,  by: 180, hair: "#f4d47b", dark: "#c9a85c", dress: "#4ade80", trim: "#1f6a3c", crown: null,      path: "figPath3", dur: 10, intro: 19 },
+        { id: "p1", bx: 450, by: 160, hair: "#f4d47b", dark: "#c9a85c", dress: "#ff6b9d", trim: "#a03055", crown: "#ffd93d", path: "figPath4", dur: 12, intro: 20 },
+        { id: "p2", bx: 540, by: 100, hair: "#edc56a", dark: "#b89550", dress: "#c084fc", trim: "#6a3aa0", crown: "#c0c0c0", path: "figPath5", dur: 8,  intro: 21 }
+      ].map(f => {
+        const skin = "#fce3c1", skinShade = "#e8c8a0", eyeC = "#1a1a1a", mouthC = "#c04060";
+        const shoe = "#3a2a1a", white = "#ffffff";
+        const children = [
+          e("div", { key: "ht",  style: { position: "absolute", left: 2,  top: 0,  width: 20, height: 4,  background: f.hair }}),
+          e("div", { key: "ht2", style: { position: "absolute", left: 4,  top: 0,  width: 4,  height: 2,  background: f.dark }}),
+          e("div", { key: "ht3", style: { position: "absolute", left: 16, top: 0,  width: 4,  height: 2,  background: f.dark }}),
+          e("div", { key: "hl",  style: { position: "absolute", left: 1,  top: 4,  width: 3,  height: 24, background: f.hair }}),
+          e("div", { key: "hr",  style: { position: "absolute", left: 20, top: 4,  width: 3,  height: 24, background: f.hair }}),
+          e("div", { key: "hl2", style: { position: "absolute", left: 0,  top: 10, width: 2,  height: 10, background: f.dark }}),
+          e("div", { key: "hr2", style: { position: "absolute", left: 22, top: 10, width: 2,  height: 10, background: f.dark }}),
+          e("div", { key: "fc",  style: { position: "absolute", left: 5,  top: 4,  width: 14, height: 14, background: skin }}),
+          e("div", { key: "lb",  style: { position: "absolute", left: 7,  top: 8,  width: 4,  height: 1,  background: f.dark }}),
+          e("div", { key: "rb",  style: { position: "absolute", left: 13, top: 8,  width: 4,  height: 1,  background: f.dark }}),
+          e("div", { key: "le",  style: { position: "absolute", left: 7,  top: 10, width: 3,  height: 2,  background: white }}),
+          e("div", { key: "lep", style: { position: "absolute", left: 8,  top: 10, width: 2,  height: 2,  background: eyeC }}),
+          e("div", { key: "re",  style: { position: "absolute", left: 14, top: 10, width: 3,  height: 2,  background: white }}),
+          e("div", { key: "rep", style: { position: "absolute", left: 15, top: 10, width: 2,  height: 2,  background: eyeC }}),
+          e("div", { key: "no",  style: { position: "absolute", left: 11, top: 13, width: 2,  height: 2,  background: skinShade }}),
+          e("div", { key: "mo",  style: { position: "absolute", left: 9,  top: 16, width: 6,  height: 1,  background: mouthC }}),
+          e("div", { key: "mo2", style: { position: "absolute", left: 10, top: 17, width: 4,  height: 1,  background: "#e57b94" }}),
+          e("div", { key: "nk",  style: { position: "absolute", left: 10, top: 18, width: 4,  height: 2,  background: skin }}),
+          e("div", { key: "dt",  style: { position: "absolute", left: 3,  top: 20, width: 18, height: 3,  background: f.dress }}),
+          e("div", { key: "db",  style: { position: "absolute", left: 2,  top: 23, width: 20, height: 15, background: f.dress }}),
+          e("div", { key: "wa",  style: { position: "absolute", left: 2,  top: 29, width: 20, height: 1,  background: f.trim }}),
+          e("div", { key: "dh",  style: { position: "absolute", left: 4,  top: 26, width: 2,  height: 1,  background: f.trim }}),
+          e("div", { key: "dh2", style: { position: "absolute", left: 18, top: 26, width: 2,  height: 1,  background: f.trim }}),
+          e("div", { key: "la",  style: { position: "absolute", left: 0,  top: 22, width: 2,  height: 13, background: skin }}),
+          e("div", { key: "ra",  style: { position: "absolute", left: 22, top: 22, width: 2,  height: 13, background: skin }}),
+          e("div", { key: "lh",  style: { position: "absolute", left: 0,  top: 34, width: 3,  height: 2,  background: skin }}),
+          e("div", { key: "rh",  style: { position: "absolute", left: 21, top: 34, width: 3,  height: 2,  background: skin }}),
+          e("div", { key: "ll",  style: { position: "absolute", left: 6,  top: 38, width: 3,  height: 10, background: skin }}),
+          e("div", { key: "rl",  style: { position: "absolute", left: 15, top: 38, width: 3,  height: 10, background: skin }}),
+          e("div", { key: "lf",  style: { position: "absolute", left: 5,  top: 48, width: 5,  height: 3,  background: shoe }}),
+          e("div", { key: "rf",  style: { position: "absolute", left: 14, top: 48, width: 5,  height: 3,  background: shoe }})
+        ];
+        if (f.crown) {
+          children.push(
+            e("div", { key: "cb",  style: { position: "absolute", left: 5,  top: -3, width: 14, height: 2, background: f.crown }}),
+            e("div", { key: "cp1", style: { position: "absolute", left: 5,  top: -5, width: 2,  height: 2, background: f.crown }}),
+            e("div", { key: "cp2", style: { position: "absolute", left: 11, top: -6, width: 2,  height: 3, background: f.crown }}),
+            e("div", { key: "cp3", style: { position: "absolute", left: 17, top: -5, width: 2,  height: 2, background: f.crown }}),
+            e("div", { key: "cg",  style: { position: "absolute", left: 11, top: -2, width: 2,  height: 1, background: "#ff3050" }})
+          );
+        }
+        return e("div", {
+          key: f.id,
+          style: {
+            position: "absolute", left: f.bx, top: f.by, width: 24, height: 52,
+            opacity: 0,
+            "--inX": (30 - f.bx) + "px",
+            "--inY": (230 - f.by) + "px",
+            animation: "figIntro 4s ease-out " + f.intro + "s 1 forwards, " + f.path + " " + f.dur + "s linear " + (f.intro + 4) + "s infinite",
+            pointerEvents: "none"
+          }
+        }, children);
+      }),
+      e("div", { key: "sp-cab",     style: { position: "absolute", left: 8,  top: 318, width: 32, height: 54, background: "#2a1608", border: "1px solid #0a0502" }}),
+      e("div", { key: "sp-inner",   style: { position: "absolute", left: 10, top: 320, width: 28, height: 50, background: "#3e2818" }}),
+      e("div", { key: "sp-grille",  style: { position: "absolute", left: 11, top: 322, width: 26, height: 46, background: "#1a0f08" }}),
+      e("div", { key: "sp-twr",     style: { position: "absolute", left: 19, top: 326, width: 10, height: 10, background: "#0a0a0a", border: "1px solid #555" }}),
+      e("div", { key: "sp-twc",     style: { position: "absolute", left: 21, top: 328, width: 6,  height: 6,  background: "#2a2a2a" }}),
+      e("div", { key: "sp-twd",     style: { position: "absolute", left: 23, top: 330, width: 2,  height: 2,  background: "#666" }}),
+      e("div", { key: "sp-led",     style: { position: "absolute", left: 32, top: 324, width: 2,  height: 2,  background: "#ff3050", boxShadow: "0 0 4px #ff3050", animation: "ledPulse 1.5s ease-in-out infinite" }}),
+      e("div", { key: "sp-wfr",     style: { position: "absolute", left: 13, top: 342, width: 22, height: 22, background: "#0a0a0a", border: "1px solid #555" }}),
+      e("div", { key: "sp-wfo",     style: { position: "absolute", left: 15, top: 344, width: 18, height: 18, background: "#1a1a1a" }}),
+      e("div", { key: "sp-wfm",     style: { position: "absolute", left: 17, top: 346, width: 14, height: 14, background: "#2a2a2a" }}),
+      e("div", { key: "sp-wfi",     style: { position: "absolute", left: 19, top: 348, width: 10, height: 10, background: "#3a3a3a" }}),
+      e("div", { key: "sp-wfc",     style: { position: "absolute", left: 21, top: 350, width: 6,  height: 6,  background: "#555" }}),
+      e("div", { key: "sp-wfd",     style: { position: "absolute", left: 23, top: 352, width: 2,  height: 2,  background: "#888" }}),
+      ["#64ffda", "#ffd93d", "#c084fc"].map((col, wi) => e("div", {
+        key: "sw-b" + wi,
+        style: {
+          position: "absolute", left: 44, top: 316, width: 16, height: 50,
+          animation: "soundWave 2s ease-out infinite",
+          animationDelay: (wi * 0.65 + 5) + "s",
+          pointerEvents: "none"
+        }
+      },
+        [
+          [0, 0], [2, 3], [4, 6], [6, 10], [8, 14], [10, 18], [12, 22], [13, 26],
+          [12, 30], [10, 34], [8, 38], [6, 42], [4, 46], [2, 48], [0, 50]
+        ].map(([x, y], di) => e("div", {
+          key: "d" + di,
+          style: { position: "absolute", left: x, top: y, width: 2, height: 2, background: col }
+        }))
+      )),
+      e("div", { key: "sp2-cab",    style: { position: "absolute", left: 8,  top: 8,  width: 32, height: 54, background: "#2a1608", border: "1px solid #0a0502" }}),
+      e("div", { key: "sp2-inner",  style: { position: "absolute", left: 10, top: 10, width: 28, height: 50, background: "#3e2818" }}),
+      e("div", { key: "sp2-grille", style: { position: "absolute", left: 11, top: 12, width: 26, height: 46, background: "#1a0f08" }}),
+      e("div", { key: "sp2-twr",    style: { position: "absolute", left: 19, top: 16, width: 10, height: 10, background: "#0a0a0a", border: "1px solid #555" }}),
+      e("div", { key: "sp2-twc",    style: { position: "absolute", left: 21, top: 18, width: 6,  height: 6,  background: "#2a2a2a" }}),
+      e("div", { key: "sp2-twd",    style: { position: "absolute", left: 23, top: 20, width: 2,  height: 2,  background: "#666" }}),
+      e("div", { key: "sp2-led",    style: { position: "absolute", left: 32, top: 14, width: 2,  height: 2,  background: "#4ade80", boxShadow: "0 0 4px #4ade80", animation: "ledPulse 2s ease-in-out infinite" }}),
+      e("div", { key: "sp2-wfr",    style: { position: "absolute", left: 13, top: 32, width: 22, height: 22, background: "#0a0a0a", border: "1px solid #555" }}),
+      e("div", { key: "sp2-wfo",    style: { position: "absolute", left: 15, top: 34, width: 18, height: 18, background: "#1a1a1a" }}),
+      e("div", { key: "sp2-wfm",    style: { position: "absolute", left: 17, top: 36, width: 14, height: 14, background: "#2a2a2a" }}),
+      e("div", { key: "sp2-wfi",    style: { position: "absolute", left: 19, top: 38, width: 10, height: 10, background: "#3a3a3a" }}),
+      e("div", { key: "sp2-wfc",    style: { position: "absolute", left: 21, top: 40, width: 6,  height: 6,  background: "#555" }}),
+      e("div", { key: "sp2-wfd",    style: { position: "absolute", left: 23, top: 42, width: 2,  height: 2,  background: "#888" }}),
+      ["#ffd93d", "#64ffda", "#ff6b9d"].map((col, wi) => e("div", {
+        key: "sw-t" + wi,
+        style: {
+          position: "absolute", left: 44, top: 14, width: 16, height: 50,
+          animation: "soundWave 2s ease-out infinite",
+          animationDelay: (wi * 0.65 + 5) + "s",
+          pointerEvents: "none"
+        }
+      },
+        [
+          [0, 0], [2, 3], [4, 6], [6, 10], [8, 14], [10, 18], [12, 22], [13, 26],
+          [12, 30], [10, 34], [8, 38], [6, 42], [4, 46], [2, 48], [0, 50]
+        ].map(([x, y], di) => e("div", {
+          key: "d" + di,
+          style: { position: "absolute", left: x, top: y, width: 2, height: 2, background: col }
+        }))
+      )),
+      e("img", { key: "pirate", src: "https://idletuesday.ai/Thursdays/avatars/pirate.svg", alt: "pirate", style: {
+        position: "absolute", left: 60, top: 15, width: 40, height: 40,
+        imageRendering: "pixelated",
+        animation: "pacLoop1 10s linear 3s infinite"
+      }}),
+      e("img", { key: "vader", src: "https://idletuesday.ai/Thursdays/avatars/vader.svg", alt: "vader", style: {
+        position: "absolute", left: 60, top: 200, width: 40, height: 40,
+        imageRendering: "pixelated",
+        animation: "pacLoop2 12s linear 3s infinite"
+      }}),
+      e("img", { key: "doomguy", src: "https://idletuesday.ai/Thursdays/avatars/doomguy.svg", alt: "doomguy", style: {
+        position: "absolute", left: 400, top: 20, width: 40, height: 40,
+        imageRendering: "pixelated",
+        animation: "pacLoop3 6s linear 3s infinite"
+      }}),
+      e("img", { key: "astro", src: "https://idletuesday.ai/Thursdays/avatars/astronaut.svg", alt: "astronaut", style: {
+        position: "absolute", left: 180, top: 220, width: 40, height: 40,
+        imageRendering: "pixelated",
+        animation: "pacLoop4 5s linear 3s infinite"
+      }}),
+      e("div", { key: "cell", style: {
+        position: "absolute", right: 20, bottom: 20, width: 140, height: 110,
+        border: "3px solid #ff6b6b",
+        background: "rgba(255,107,107,0.05)",
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        gap: 2, overflow: "visible"
+      }},
+        e(PixelIcon, { key: "q", type: "question" }),
+        e("img", { key: "guest", src: "mystery_guest.png", alt: "mystery guest", style: { width: 42, height: 42, imageRendering: "pixelated", borderRadius: "50%", objectFit: "cover", display: "block", marginTop: 2 }}),
+        e("div", { key: "na", style: { color: "#ff6b6b", fontSize: 8, fontFamily: "monospace", letterSpacing: 1, marginTop: 2, fontWeight: 700 }}, "NO ACCESS"),
+        e("div", { key: "tear", style: {
+          position: "absolute", left: 60, top: 48, width: 3, height: 6,
+          background: "#64b5f6",
+          animation: "tearFall 3s ease-in infinite",
+          pointerEvents: "none"
+        }}),
+        e("div", { key: "puddle", style: {
+          position: "absolute", left: 55, bottom: 4, width: 14, height: 2,
+          background: "#3b82f6",
+          borderRadius: "1px",
+          opacity: 0.6
+        }}),
+        e("div", { key: "splash", style: {
+          position: "absolute", left: 54, bottom: 5, width: 16, height: 2,
+          background: "#64b5f6",
+          borderRadius: "1px",
+          animation: "tearSplash 3s ease-in infinite",
+          pointerEvents: "none"
+        }}),
+        e("div", { key: "sup-c", style: {
+          position: "absolute", left: 61, bottom: 8, width: 2, height: 2,
+          background: "#64b5f6",
+          animation: "splashUpC 3s ease-in infinite",
+          pointerEvents: "none"
+        }}),
+        e("div", { key: "sup-l", style: {
+          position: "absolute", left: 58, bottom: 8, width: 2, height: 2,
+          background: "#64b5f6",
+          animation: "splashUpL 3s ease-in infinite",
+          pointerEvents: "none"
+        }}),
+        e("div", { key: "sup-r", style: {
+          position: "absolute", left: 64, bottom: 8, width: 2, height: 2,
+          background: "#64b5f6",
+          animation: "splashUpR 3s ease-in infinite",
+          pointerEvents: "none"
+        }})
+      )
+    )
+  )
+];
+
+const DESIGN_W = 960, DESIGN_H = 540;
+
+function App() {
+  const [slide, setSlide] = useState(0);
+  const [scale, setScale] = useState(1);
+  const total = SLIDES.length;
+  const next = useCallback(() => setSlide(s => Math.min(s + 1, total - 1)), [total]);
+  const prev = useCallback(() => setSlide(s => Math.max(s - 1, 0)), []);
+
+  useEffect(() => {
+    const update = () => {
+      const availW = window.innerWidth - 16;
+      const availH = window.innerHeight - 16;
+      const s = Math.min(availW / DESIGN_W, availH / DESIGN_H);
+      setScale(s > 0 ? s : 1);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    const handler = (ev) => {
+      if (ev.key === "ArrowRight" || ev.key === " ") { ev.preventDefault(); next(); }
+      if (ev.key === "ArrowLeft") { ev.preventDefault(); prev(); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [next, prev]);
+
+  const scaledW = DESIGN_W * scale;
+  const scaledH = DESIGN_H * scale;
+
+  return e("div", { style: {
+    position: "fixed", inset: 0,
+    background: "#0f0f1a", color: "#ccc", fontFamily: "monospace",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    userSelect: "none", overflow: "hidden"
+  }},
+    e("div", { style: { width: scaledW, height: scaledH, position: "relative" }},
+      e("div", { style: {
+        width: DESIGN_W, height: DESIGN_H,
+        transform: "scale(" + scale + ")", transformOrigin: "top left",
+        position: "absolute", top: 0, left: 0,
+        overflow: "hidden", border: "3px solid #222", boxSizing: "border-box"
+      }},
+        e("div", { style: {
+          position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0,
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)",
+          backgroundSize: "24px 24px"
+        }}),
+        e("div", { style: { position: "relative", zIndex: 1, height: "100%", padding: "24px 36px", boxSizing: "border-box", display: "flex", flexDirection: "column" }},
+          SLIDES[slide]()
+        )
+      )
+    ),
+    e("div", { style: {
+      position: "fixed", bottom: 10, left: "50%", transform: "translateX(-50%)",
+      display: "flex", alignItems: "center", gap: 14,
+      padding: "6px 14px", background: "rgba(10,10,20,0.75)",
+      border: "1px solid #222", zIndex: 10
+    }},
+      e("button", { onClick: prev, disabled: slide === 0, style: {
+        background: "none", border: "2px solid #333", color: slide === 0 ? "#333" : "#64ffda",
+        padding: "5px 12px", fontFamily: "monospace", fontSize: 11, cursor: slide === 0 ? "default" : "pointer"
+      }}, "\u25C0 PREV"),
+      e("div", { style: { display: "flex", gap: 4, alignItems: "center" }},
+        SLIDES.map((_, i) => e("div", { key: i, onClick: () => setSlide(i), style: {
+          width: i === slide ? 16 : 6, height: 6,
+          background: i === slide ? "#64ffda" : "#333",
+          cursor: "pointer", transition: "all 0.15s"
+        }})),
+        e("span", { style: { marginLeft: 10, color: "#666", fontSize: 11 }}, (slide + 1) + " / " + total)
+      ),
+      e("button", { onClick: next, disabled: slide === total - 1, style: {
+        background: "none", border: "2px solid #333", color: slide === total - 1 ? "#333" : "#64ffda",
+        padding: "5px 12px", fontFamily: "monospace", fontSize: 11, cursor: slide === total - 1 ? "default" : "pointer"
+      }}, "NEXT \u25B6")
+    )
+  );
+}
+
+ReactDOM.render(e(App), document.getElementById("root"));
+</script>
+</body>
+</html>
