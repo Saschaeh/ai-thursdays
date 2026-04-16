@@ -19,12 +19,13 @@ $dataFile = $dataDir . '/db.json';
 function loadData() {
     global $dataFile;
     if (!file_exists($dataFile)) {
-        return ['members' => [], 'ideas' => [], 'comments' => [], 'votes' => [], 'notifications' => [], 'feature_requests' => [], 'changelog' => [], 'next_id' => 1];
+        return ['members' => [], 'ideas' => [], 'comments' => [], 'votes' => [], 'notifications' => [], 'feature_requests' => [], 'changelog' => [], 'resources' => [], 'next_id' => 1];
     }
     $data = json_decode(file_get_contents($dataFile), true);
     if (!isset($data['notifications'])) $data['notifications'] = [];
     if (!isset($data['feature_requests'])) $data['feature_requests'] = [];
     if (!isset($data['changelog'])) $data['changelog'] = [];
+    if (!isset($data['resources'])) $data['resources'] = [];
     return $data;
 }
 
@@ -686,6 +687,47 @@ if (preg_match('#^/changelog/(\d+)$#', $route, $m)) {
     $clId = (int)$m[1];
     if ($method === 'DELETE') {
         $data['changelog'] = array_values(array_filter($data['changelog'], fn($e) => $e['id'] !== $clId));
+        saveData($data);
+        jsonResponse(['ok' => true]);
+    }
+}
+
+// Route: /resources
+if ($route === '/resources') {
+    if ($method === 'GET') {
+        $result = [];
+        foreach ($data['resources'] as $r) {
+            $r['submitted_by_name'] = getMemberName($data['members'], $r['submitted_by']);
+            $result[] = $r;
+        }
+        usort($result, fn($a, $b) => strcmp($b['created_at'], $a['created_at']));
+        jsonResponse($result);
+    }
+    if ($method === 'POST') {
+        $title = trim($body['title'] ?? '');
+        $url = trim($body['url'] ?? '');
+        if (!$title) jsonResponse(['error' => 'Title is required'], 400);
+        if (!$url) jsonResponse(['error' => 'URL is required'], 400);
+        $r = [
+            'id' => nextId($data),
+            'title' => $title,
+            'description' => trim($body['description'] ?? ''),
+            'url' => $url,
+            'submitted_by' => (int)($body['submitted_by'] ?? 0),
+            'created_at' => date('Y-m-d H:i:s'),
+        ];
+        $data['resources'][] = $r;
+        saveData($data);
+        $r['submitted_by_name'] = getMemberName($data['members'], $r['submitted_by']);
+        jsonResponse($r);
+    }
+}
+
+// Route: /resources/:id
+if (preg_match('#^/resources/(\d+)$#', $route, $m)) {
+    $rId = (int)$m[1];
+    if ($method === 'DELETE') {
+        $data['resources'] = array_values(array_filter($data['resources'], fn($r) => $r['id'] !== $rId));
         saveData($data);
         jsonResponse(['ok' => true]);
     }
