@@ -1200,9 +1200,9 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
   const otherMembers = members.filter(m => m.id !== currentUser.id).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div className="grid md:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
-      <div>
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 mb-5">
+    <div className="grid md:grid-cols-[minmax(0,1fr)_320px] gap-5 items-stretch">
+      <div className="flex flex-col">
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 sm:p-6 mb-5 flex-1">
         <div className="flex items-center gap-4 mb-6">
           <Avatar member={{ ...currentUser, avatar: selectedAvatar }} size="lg" />
           <div>
