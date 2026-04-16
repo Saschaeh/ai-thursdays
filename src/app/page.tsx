@@ -427,6 +427,7 @@ export default function Home() {
           const allBoardIdeas = ideas.filter(i => (i.board ?? 'research') === tab);
           const activeIdeas = allBoardIdeas.filter(i => !i.archived);
           const archivedIdeas = allBoardIdeas.filter(i => i.archived);
+          const totalArchived = ideas.filter(i => i.archived).length;
           const boardIdeas = showArchived ? archivedIdeas : activeIdeas;
           return (
             <>
@@ -436,14 +437,16 @@ export default function Home() {
                     onClick={() => setShowArchived(false)}
                     className={`transition ${!showArchived ? 'text-gray-300 font-medium' : 'text-gray-500 hover:text-gray-300'}`}
                   >
-                    {activeIdeas.length} idea{activeIdeas.length !== 1 ? 's' : ''} submitted
+                    {tab === 'research'
+                      ? `${activeIdeas.length} research item${activeIdeas.length !== 1 ? 's' : ''}`
+                      : `${activeIdeas.length} commercial idea${activeIdeas.length !== 1 ? 's' : ''}`}
                   </button>
                   <span className="text-gray-700">|</span>
                   <button
                     onClick={() => setShowArchived(true)}
                     className={`transition ${showArchived ? 'text-gray-300 font-medium' : 'text-gray-500 hover:text-gray-300'}`}
                   >
-                    Archived
+                    {totalArchived} archived
                   </button>
                 </div>
                 {!showArchived && (
