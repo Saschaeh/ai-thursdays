@@ -882,6 +882,10 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
   onClose: () => void; onUpdate: () => void; onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(idea.title);
+  const [description, setDescription] = useState(idea.description);
+  const [category, setCategory] = useState(idea.category);
+  const [board, setBoard] = useState<Board>(idea.board ?? 'research');
   const [status, setStatus] = useState(idea.status);
   const [assignedTo, setAssignedTo] = useState<number[]>(idea.assigned_to ?? []);
   const [targetDate, setTargetDate] = useState(idea.target_date ?? '');
@@ -889,9 +893,14 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleSave = async () => {
+    if (!title.trim()) return;
     await api(`/ideas/${idea.id}`, {
       method: 'PATCH',
       body: JSON.stringify({
+        title: title.trim(),
+        description,
+        category,
+        board,
         status,
         assigned_to: assignedTo,
         target_date: targetDate || null,
@@ -900,6 +909,18 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
     });
     setEditing(false);
     onUpdate();
+  };
+
+  const handleCancelEdit = () => {
+    setTitle(idea.title);
+    setDescription(idea.description);
+    setCategory(idea.category);
+    setBoard(idea.board ?? 'research');
+    setStatus(idea.status);
+    setAssignedTo(idea.assigned_to ?? []);
+    setTargetDate(idea.target_date ?? '');
+    setEditLinks(idea.links ?? []);
+    setEditing(false);
   };
 
   const topLevelComments = (idea.comments ?? []).filter(c => !c.parent_id);
@@ -958,7 +979,31 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
               </div>
             ) : (
               <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">Title</p>
+                  <input
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition"
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-2">Description</p>
+                  <textarea
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition resize-none"
+                  />
+                </div>
                 <div className="flex gap-2 flex-wrap items-center">
+                  <select value={board} onChange={e => setBoard(e.target.value as Board)} className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm">
+                    <option value="research">Research</option>
+                    <option value="commercial">Commercial</option>
+                  </select>
+                  <select value={category} onChange={e => setCategory(e.target.value)} className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm">
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                   <select value={status} onChange={e => setStatus(e.target.value)} className="px-3 py-1.5 bg-gray-800 border border-gray-700 rounded-lg text-gray-300 text-sm">
                     {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
                   </select>
@@ -988,8 +1033,8 @@ function IdeaDetail({ idea, currentUser, members, onClose, onUpdate, onDelete }:
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleSave} className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-400 transition">Save</button>
-                  <button onClick={() => setEditing(false)} className="px-4 py-1.5 text-gray-400 hover:text-gray-200 text-sm transition">Cancel</button>
+                  <button onClick={handleSave} disabled={!title.trim()} className="px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-400 transition disabled:opacity-50">Save</button>
+                  <button onClick={handleCancelEdit} className="px-4 py-1.5 text-gray-400 hover:text-gray-200 text-sm transition">Cancel</button>
                 </div>
               </div>
             )}
