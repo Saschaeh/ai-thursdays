@@ -1171,9 +1171,18 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
   const [selectedAvatar, setSelectedAvatar] = useState(currentUser.avatar || '');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [myResourceCount, setMyResourceCount] = useState(0);
 
-  const myIdeas = ideas.filter(i => i.submitted_by === currentUser.id);
-  const assignedIdeas = ideas.filter(i => (i.assigned_to ?? []).includes(currentUser.id));
+  useEffect(() => {
+    api<Resource[]>('/resources').then(rs => {
+      setMyResourceCount(rs.filter(r => r.submitted_by === currentUser.id && !r.archived).length);
+    });
+  }, [currentUser.id]);
+
+  const myIdeas = ideas.filter(i => i.submitted_by === currentUser.id && !i.archived);
+  const myResearch = myIdeas.filter(i => (i.board ?? 'research') === 'research');
+  const myCommercial = myIdeas.filter(i => i.board === 'commercial');
+  const assignedIdeas = ideas.filter(i => (i.assigned_to ?? []).includes(currentUser.id) && !i.archived);
 
   const handleSave = async () => {
     if (!name.trim()) return;
@@ -1262,17 +1271,6 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-5">
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 text-center">
-          <p className="text-2xl font-bold text-emerald-400">{myIdeas.length}</p>
-          <p className="text-sm text-gray-500">Ideas submitted</p>
-        </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 text-center">
-          <p className="text-2xl font-bold text-emerald-400">{assignedIdeas.length}</p>
-          <p className="text-sm text-gray-500">Assigned to you</p>
-        </div>
-      </div>
-
       <div className="mt-6 text-center">
         <button onClick={onLogout} className="text-sm text-gray-500 hover:text-red-400 transition">
           Log out / Switch user
@@ -1281,6 +1279,28 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
       </div>
 
       <div className="space-y-5">
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+          <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">Your Stats</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gray-800/50 border border-gray-800 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-emerald-400">{myResearch.length}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Research</p>
+            </div>
+            <div className="bg-gray-800/50 border border-gray-800 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-emerald-400">{myCommercial.length}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Commercial</p>
+            </div>
+            <div className="bg-gray-800/50 border border-gray-800 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-emerald-400">{myResourceCount}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Resources</p>
+            </div>
+            <div className="bg-gray-800/50 border border-gray-800 rounded-xl p-3 text-center">
+              <p className="text-xl font-bold text-emerald-400">{assignedIdeas.length}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Assigned</p>
+            </div>
+          </div>
+        </div>
+
         {assignedIdeas.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
             <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Your Assignments</h3>
