@@ -387,7 +387,7 @@ export default function Home() {
                 tab === 'diary' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
               }`}
             >
-              Diary / Schedule
+              Calendar
             </button>
             <button
               onClick={() => setTab('requests')}
