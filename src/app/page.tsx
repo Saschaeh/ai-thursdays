@@ -8,8 +8,10 @@ type Notification = { id: number; member_id: number; type: string; message: stri
 type FeatureRequest = { id: number; content: string; submitted_by: number; submitted_by_name: string; status: string; created_at: string };
 type ChangelogEntry = { id: number; content: string; submitted_by: number; submitted_by_name: string; completed_at: string };
 type Vote = { id: number; idea_id: number; member_id: number; member_name: string };
+type Board = 'research' | 'commercial';
 type Idea = {
   id: number; title: string; description: string; category: string;
+  board: Board;
   status: string; submitted_by: number; submitted_by_name: string;
   assigned_to: number[]; assigned_to_name: string | null; assigned_to_names: string[];
   links?: string[]; target_date: string | null; vote_count: number; comment_count: number;
@@ -65,7 +67,7 @@ export default function Home() {
   const [members, setMembers] = useState<Member[]>([]);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [ideas, setIdeas] = useState<Idea[]>([]);
-  const [tab, setTab] = useState<'ideas' | 'diary' | 'requests' | 'profile'>('ideas');
+  const [tab, setTab] = useState<'research' | 'commercial' | 'diary' | 'requests' | 'profile'>('research');
   const [showNewIdea, setShowNewIdea] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<Idea | null>(null);
   const [nameInput, setNameInput] = useState('');
@@ -350,12 +352,20 @@ export default function Home() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-6">
         <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit">
           <button
-            onClick={() => setTab('ideas')}
+            onClick={() => setTab('research')}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              tab === 'ideas' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              tab === 'research' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
             }`}
           >
-            Ideas
+            Research
+          </button>
+          <button
+            onClick={() => setTab('commercial')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              tab === 'commercial' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+            }`}
+          >
+            Commercial
           </button>
           <button
             onClick={() => setTab('diary')}
@@ -398,52 +408,56 @@ export default function Home() {
       )}
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-        {tab === 'ideas' && (
-          <>
-            <div className="flex justify-between items-center mb-5">
-              <p className="text-gray-500 text-sm">{ideas.length} idea{ideas.length !== 1 ? 's' : ''} submitted</p>
-              <button
-                onClick={() => setShowNewIdea(true)}
-                className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 text-sm font-medium transition"
-              >
-                + New Idea
-              </button>
-            </div>
+        {(tab === 'research' || tab === 'commercial') && (() => {
+          const boardIdeas = ideas.filter(i => (i.board ?? 'research') === tab);
+          return (
+            <>
+              <div className="flex justify-between items-center mb-5">
+                <p className="text-gray-500 text-sm">{boardIdeas.length} idea{boardIdeas.length !== 1 ? 's' : ''} submitted</p>
+                <button
+                  onClick={() => setShowNewIdea(true)}
+                  className="px-4 py-2 bg-emerald-500 text-white rounded-xl hover:bg-emerald-400 text-sm font-medium transition"
+                >
+                  + New Idea
+                </button>
+              </div>
 
-            {showNewIdea && (
-              <NewIdeaForm
-                currentUser={currentUser}
-                onSubmit={() => { setShowNewIdea(false); loadIdeas(); }}
-                onCancel={() => setShowNewIdea(false)}
-              />
-            )}
-
-            <div className="grid gap-3">
-              {[...ideas].sort((a, b) => b.vote_count - a.vote_count).map(idea => (
-                <IdeaCard
-                  key={idea.id}
-                  idea={idea}
-                  members={members}
-                  onSelect={() => {
-                    api<Idea>(`/ideas/${idea.id}`).then(setSelectedIdea);
-                  }}
-                  onVote={async () => {
-                    await api(`/ideas/${idea.id}/votes`, {
-                      method: 'POST',
-                      body: JSON.stringify({ member_id: currentUser.id }),
-                    });
-                    loadIdeas();
-                  }}
+              {showNewIdea && (
+                <NewIdeaForm
+                  currentUser={currentUser}
+                  board={tab}
+                  onSubmit={() => { setShowNewIdea(false); loadIdeas(); }}
+                  onCancel={() => setShowNewIdea(false)}
                 />
-              ))}
-              {ideas.length === 0 && (
-                <div className="text-center py-16">
-                  <p className="text-gray-600 text-sm">No ideas yet. Be the first to add one!</p>
-                </div>
               )}
-            </div>
-          </>
-        )}
+
+              <div className="grid gap-3">
+                {[...boardIdeas].sort((a, b) => b.vote_count - a.vote_count).map(idea => (
+                  <IdeaCard
+                    key={idea.id}
+                    idea={idea}
+                    members={members}
+                    onSelect={() => {
+                      api<Idea>(`/ideas/${idea.id}`).then(setSelectedIdea);
+                    }}
+                    onVote={async () => {
+                      await api(`/ideas/${idea.id}/votes`, {
+                        method: 'POST',
+                        body: JSON.stringify({ member_id: currentUser.id }),
+                      });
+                      loadIdeas();
+                    }}
+                  />
+                ))}
+                {boardIdeas.length === 0 && (
+                  <div className="text-center py-16">
+                    <p className="text-gray-600 text-sm">No ideas yet. Be the first to add one!</p>
+                  </div>
+                )}
+              </div>
+            </>
+          );
+        })()}
 
         {tab === 'diary' && (
           <CalendarView ideas={ideas} onSelectIdea={(id) => {
@@ -487,8 +501,8 @@ export default function Home() {
   );
 }
 
-function NewIdeaForm({ currentUser, onSubmit, onCancel }: {
-  currentUser: Member; onSubmit: () => void; onCancel: () => void;
+function NewIdeaForm({ currentUser, board, onSubmit, onCancel }: {
+  currentUser: Member; board: Board; onSubmit: () => void; onCancel: () => void;
 }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -506,7 +520,7 @@ function NewIdeaForm({ currentUser, onSubmit, onCancel }: {
     if (!title.trim() || hp) return;
     await api('/ideas', {
       method: 'POST',
-      body: JSON.stringify({ title, description, category, submitted_by: currentUser.id, links: links.filter(l => l.trim()), website: hp }),
+      body: JSON.stringify({ title, description, category, board, submitted_by: currentUser.id, links: links.filter(l => l.trim()), website: hp }),
     });
     setShowFireworks(true);
     setTimeout(() => onSubmit(), 1500);

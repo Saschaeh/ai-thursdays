@@ -251,6 +251,16 @@ if (empty($data['_migrated_v4'])) {
     saveData($data);
 }
 
+// Migration v5: tag every existing idea with board='research'
+if (empty($data['_migrated_v5'])) {
+    foreach ($data['ideas'] as &$idea) {
+        if (empty($idea['board'])) $idea['board'] = 'research';
+    }
+    unset($idea);
+    $data['_migrated_v5'] = true;
+    saveData($data);
+}
+
 // Route: /members
 if ($route === '/members') {
     if ($method === 'GET') {
@@ -295,11 +305,13 @@ if ($route === '/ideas') {
         if (!is_array($links)) $links = [];
         $links = array_slice(array_filter(array_map('trim', $links)), 0, 3);
 
+        $board = ($body['board'] ?? 'research') === 'commercial' ? 'commercial' : 'research';
         $idea = [
             'id' => nextId($data),
             'title' => $title,
             'description' => $body['description'] ?? '',
             'category' => $body['category'] ?? 'General',
+            'board' => $board,
             'status' => 'new',
             'submitted_by' => $body['submitted_by'] ?? null,
             'assigned_to' => [],
@@ -355,7 +367,7 @@ if (preg_match('#^/ideas/(\d+)$#', $route, $m)) {
             if (!is_array($links)) $links = [];
             $data['ideas'][$ideaIdx]['links'] = array_values(array_slice(array_filter(array_map('trim', $links)), 0, 3));
         }
-        foreach (['title', 'description', 'category', 'status', 'target_date'] as $key) {
+        foreach (['title', 'description', 'category', 'board', 'status', 'target_date'] as $key) {
             if (array_key_exists($key, $body)) {
                 $data['ideas'][$ideaIdx][$key] = $body[$key];
             }
