@@ -350,47 +350,51 @@ export default function Home() {
       </header>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 mt-6">
-        <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit">
-          <button
-            onClick={() => setTab('research')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              tab === 'research' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-            }`}
-          >
-            Research
-          </button>
-          <button
-            onClick={() => setTab('commercial')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              tab === 'commercial' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-            }`}
-          >
-            Commercial
-          </button>
-          <button
-            onClick={() => setTab('diary')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              tab === 'diary' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-            }`}
-          >
-            Diary / Schedule
-          </button>
-          <button
-            onClick={() => setTab('requests')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              tab === 'requests' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-            }`}
-          >
-            Requests
-          </button>
-          <button
-            onClick={() => setTab('profile')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              tab === 'profile' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-            }`}
-          >
-            Profile
-          </button>
+        <div className="flex flex-wrap gap-3 items-center justify-between">
+          <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit">
+            <button
+              onClick={() => setTab('research')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                tab === 'research' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              }`}
+            >
+              Research
+            </button>
+            <button
+              onClick={() => setTab('commercial')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                tab === 'commercial' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              }`}
+            >
+              Commercial
+            </button>
+          </div>
+          <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-xl p-1 w-fit ml-auto">
+            <button
+              onClick={() => setTab('diary')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                tab === 'diary' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              }`}
+            >
+              Diary / Schedule
+            </button>
+            <button
+              onClick={() => setTab('requests')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                tab === 'requests' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              }`}
+            >
+              Requests
+            </button>
+            <button
+              onClick={() => setTab('profile')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                tab === 'profile' ? 'bg-emerald-500 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              }`}
+            >
+              Profile
+            </button>
+          </div>
         </div>
       </div>
 
