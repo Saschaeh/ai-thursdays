@@ -1215,7 +1215,7 @@ function ProfilePage({ currentUser, members, ideas, onUpdate, onLogout }: {
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">Squad</h3>
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-4">The Squad</h3>
         <div className="space-y-3">
           {otherMembers.map(m => (
             <div key={m.id} className="flex items-center gap-3">
